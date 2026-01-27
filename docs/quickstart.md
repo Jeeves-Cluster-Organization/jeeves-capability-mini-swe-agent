@@ -1,116 +1,50 @@
 # Quick start
 
-!!! tip "Installation Options"
+!!! note "Fork Notice"
 
-    === "pip"
+    This is a fork of [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) with jeeves-core integration.
+    For the original project, see [mini-swe-agent.com](https://mini-swe-agent.com).
 
-        Use pip to install `mini` in your current environment:
+## Installation
 
-        ```bash
-        pip install mini-swe-agent
-        ```
+### From Source (Recommended for this fork)
 
-        And try our command line interface
+Clone with submodule to get jeeves-core:
 
-        ```bash
-        mini  # simple UI
-        mini -v  # visual UI
-        mini-extra  # extra utilities
-        ```
+```bash
+git clone --recursive https://github.com/Jeeves-Cluster-Organization/jeeves-capability-mini-swe-agent.git
+cd jeeves-capability-mini-swe-agent
+pip install -e ".[dev]"
+```
 
-    === "uv (isolated)"
+Then run:
 
-        Use `uv`/`uvx` ([installation](https://docs.astral.sh/uv/getting-started/installation/)) to directly run the `mini` CLI.
-        Use this if you're only interested in the CLI but don't need python bindings (`mini` will be installed in an anonymous virtual environment).
+```bash
+mini  # simple UI (legacy mode)
+mini -v  # visual UI (legacy mode)
+mini-jeeves -t "Fix the bug" --mode parallel  # jeeves integration mode
+```
 
-        Quickly install + run:
+### Original mini-swe-agent (upstream)
 
-        ```bash
-        uvx mini-swe-agent  # simple UI
-        uvx mini-swe-agent -v  # visual UI
-        uvx --from mini-swe-agent mini-extra  # extra utilities
-        ```
+If you want the original mini-swe-agent without jeeves-core:
 
-        Permanently install
+```bash
+pip install mini-swe-agent
+```
 
-        ```bash
-        uv tool install mini-swe-agent
-        # then
-        mini  # simple UI
-        mini -v  # visual UI
-        mini-extra  # extra utilities
-        ```
+See the [original documentation](https://mini-swe-agent.com/latest/quickstart/) for upstream installation options.
 
-    === "pipx (isolated)"
+## Development Setup
 
-        Use pipx ([installation](https://pipx.pypa.io/stable/installation/)) to directly run the `mini` CLI.
-        Use this if you're only interested in the CLI but don't need python bindings (`mini` will be installed in an anonymous virtual environment).
+If you are planning to contribute, install dev dependencies and `pre-commit` hooks:
 
-        Quick install + run:
+```bash
+pip install -e '.[dev]'
+pip install pre-commit && pre-commit install
+```
 
-        ```bash
-        # Simple UI
-        pipx run mini-swe-agent
-        # Textual UI
-        pipx run mini-swe-agent -v
-        # Extra utilities
-        pipx run --spec mini-swe-agent mini-extra
-        ```
-
-        or for a persistent installation (recommended):
-
-        ```bash
-        pipx install mini-swe-agent
-        # then
-        mini  # simple UI
-        mini -v  # visual UI
-        mini-extra  # extra utilities
-        ```
-
-        If the invocation doesn't immediately work, you might need to run `pipx ensurepath`.
-
-    === "From source/dev"
-
-        For development or if you want to customize the agent:
-
-        ```bash
-        git clone https://github.com/SWE-agent/mini-swe-agent.git
-        cd mini-swe-agent
-        pip install -e .
-        ```
-
-        Then run:
-
-        ```bash
-        mini  # simple UI
-        mini -v  # visual UI
-        mini-extra  # extra utilities
-        ```
-
-        Or pick a [run script](https://github.com/SWE-agent/mini-swe-agent/tree/main/src/minisweagent/run):
-
-        ```bash
-        python src/minisweagent/run/hello_world.py
-        ```
-
-        If you are planning to contribute, please also install the dev dependencies
-        and `pre-commit` hooks:
-
-        ```bash
-        pip install -e '.[dev]'
-        pip install pre-commit && pre-commit install
-        ```
-
-        To check your installation, you can run `pytest -n auto` in the root folder.
-        This should run all tests in parallel (should take ~3min to run).
-
-        Note that there are still some extra dependencies that are not installed by default
-        (basically anything that is in an `.../extra/...` folder).
-        If you truly want to get the maximal package, you can run `pip install -e '.[full]'`
-
-!!! note "Changelog"
-
-    Please see the [github release notes](https://github.com/SWE-agent/mini-swe-agent/releases) for recent changes.
+To check your installation, run `pytest -n auto` in the root folder.
 
 !!! example "Example Prompts"
 

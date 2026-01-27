@@ -1,32 +1,42 @@
-# ❤️ Contributing
+# Contributing
 
 We happily accept contributions!
 
-## Areas of help
+!!! note "Fork Notice"
 
-- Feedback on the `mini` and `mini -v` interfaces at [this github issue](https://github.com/swe-agent/mini-swe-agent/issues/161) or in our [Slack channel](https://join.slack.com/t/swe-bench/shared_invite/zt-36pj9bu5s-o3_yXPZbaH2wVnxnss1EkQ).
-- Documentation, examples, tutorials, etc. In particular, we're looking for
-    - examples of how this library is used in the wild
-    - additional examples for the [cookbook](advanced/cookbook.md)
-- Support for more models (anything where `litellm` doesn't work out of the box)
-- Support for more environments & deployments (e.g., run it as a github action, etc.)
-- Take a look at the [issues](https://github.com/SWE-agent/mini-swe-agent/issues) and look for issues marked `good-first-issue` or `help-wanted` (please read the guidelines below first)
+    This is a fork of [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) with jeeves-core integration.
+    For contributing to the original project, see [upstream contributing guide](https://mini-swe-agent.com/latest/contributing/).
+
+## Areas of Help
+
+- **Jeeves-core integration**: Improvements to the orchestrator, pipeline configurations, and v2.0 services
+- **Documentation**: Examples of jeeves-core features, pipeline usage, local LLM setups
+- **Testing**: Integration tests for the capability layer
+- Take a look at the [issues](https://github.com/Jeeves-Cluster-Organization/jeeves-capability-mini-swe-agent/issues)
 
 ## Design & Architecture
 
-- `mini-swe-agent` aims to stay minimalistic, hackable, and of high quality code.
-- To extend features, we prefer to add a new version of the one of the four components (see [cookbook](advanced/cookbook.md)), rather than making the existing components more complex.
-- Components should be relatively self-contained, but if there are utilities that might be shared, add a `utils` folder (like [this one](https://github.com/SWE-agent/mini-swe-agent/tree/main/src/minisweagent/models/utils)). But keep it simple!
-- If your component is a bit more specific, add it into an `extra` folder (like [this one](https://github.com/SWE-agent/mini-swe-agent/tree/main/src/minisweagent/run/extra))
-- Our target audience is anyone who doesn't shy away from modifying a bit of code (especially a run script) to get what they want.
-- Therefore, not everything needs to be configurable with the config files, but it should be easy to create a run script that makes use of it.
-- Many LMs write very verbose code -- please clean it up! Same goes for the tests. They should still be concise and readable.
-- Please install `pre-commit` (`pip install pre-commit && pre-commit install`) and run it before committing. This will enforce our style guide.
+This fork follows the original mini-swe-agent design principles:
 
-## Development setup
+- **Minimalistic**: Keep the core simple and hackable
+- **Modular**: Components should be self-contained
+- **High quality**: Clean, readable code with good test coverage
 
-Make sure to follow the dev setup instructions in [quickstart.md](quickstart.md).
+### Fork-specific Architecture
 
-After that you can run `pytest` with `pytest -n auto` (this parallelizes the tests across all cores for speedup).
+- `src/minisweagent/capability/` - Jeeves-core capability layer (orchestrator, tools, prompts)
+- `src/minisweagent/run/mini_jeeves.py` - CLI for jeeves integration mode
+- `jeeves-core/` - Submodule containing the agentic kernel
+
+## Development Setup
+
+```bash
+git clone --recursive https://github.com/Jeeves-Cluster-Organization/jeeves-capability-mini-swe-agent.git
+cd jeeves-capability-mini-swe-agent
+pip install -e '.[dev]'
+pip install pre-commit && pre-commit install
+```
+
+Run tests with `pytest -n auto`.
 
 {% include-markdown "_footer.md" %}
