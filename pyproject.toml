@@ -82,10 +82,14 @@ Repository = "https://github.com/SWE-agent/mini-SWE-agent"
 "Bug Tracker" = "https://github.com/SWE-agent/mini-SWE-agent/issues"
 
 [project.scripts]
-mini = "minisweagent.run.mini:app"
-mini-swe-agent = "minisweagent.run.mini:app"
+# Primary entry point - jeeves-core orchestration
+mini-jeeves = "minisweagent.run.mini_jeeves:app"
+# Alias for backwards compatibility
+mini = "minisweagent.run.mini_jeeves:app"
+mini-swe-agent = "minisweagent.run.mini_jeeves:app"
+# Extra utilities
 mini-extra = "minisweagent.run.mini_extra:main"
-mini-e= "minisweagent.run.mini_extra:main"
+mini-e = "minisweagent.run.mini_extra:main"
 
 [tool.setuptools]
 include-package-data = true
