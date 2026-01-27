@@ -7,138 +7,176 @@
 
 ## Summary
 
-After pulling the jeeves-core submodule and running tests:
+After pulling the jeeves-core submodule, running tests, and cleaning up legacy code:
 
-| Category | Passed | Failed | Skipped | Errors |
-|----------|--------|--------|---------|--------|
-| Capability Tests | 60 | 0 | 0 | 0 |
-| Environment Tests | 50 | 2* | 0 | 0 |
-| Model Tests | 59 | 0 | 48 | 0 |
-| Legacy Tests | 0 | 0 | 0 | 9** |
+| Category | Passed | Failed | Skipped |
+|----------|--------|--------|---------|
+| Capability Tests | 60 | 0 | 0 |
+| Environment Tests | 50 | 2* | 0 |
+| Model Tests | 59 | 0 | 48 |
+| Run Tests | 47 | 0 | 0 |
+| **Total** | **216** | **2** | **48** |
 
-**\*** 2 failures due to Docker not being available in test environment (expected)
-**\*\*** 9 collection errors due to missing legacy modules (removed in v2.0)
-
-**Total Working**: 169 passed, 2 infrastructure failures, 48 skipped
-**Total Broken**: 9 test files with import errors
+**\*** 2 failures due to Docker not being available in test environment (expected infrastructure limitation)
 
 ---
 
-## Unwired Capabilities (Legacy Code Not Migrated)
+## Code Coverage Analysis
 
-The following legacy modules were removed as part of the v2.0 migration but their tests and dependent source files still reference them:
+### Overall Coverage: 43%
 
-### Missing Agent Modules
+### Capability Layer Coverage: 36%
 
-| Module | Class/Function | Status |
-|--------|----------------|--------|
-| `minisweagent.agents.default` | `DefaultAgent`, `AgentConfig` | Removed |
-| `minisweagent.agents.interactive` | `InteractiveAgent` | Removed |
-| `minisweagent.agents.interactive_textual` | `_messages_to_steps` | Removed |
-
-**Replacement**: All agent behavior now flows through `minisweagent.capability.orchestrator.SWEOrchestrator` using jeeves-core's `PipelineRunner`.
-
-### Missing Run Modules
-
-| Module | Entry Point | Status |
-|--------|-------------|--------|
-| `minisweagent.run.mini` | `mini` CLI | Removed |
-
-**Replacement**: `minisweagent.run.mini_jeeves` provides the `mini-jeeves` CLI.
-
----
-
-## Broken Test Files
-
-These test files fail to import due to missing legacy modules:
-
-| Test File | Missing Import | Action Required |
-|-----------|----------------|-----------------|
-| `tests/config/test_swebench_template.py` | `agents.default.AgentConfig` | Delete or migrate |
-| `tests/run/test_cli_integration.py` | `run.mini` | Delete or migrate |
-| `tests/run/test_github_issue.py` | `agents.interactive` | Delete or migrate |
-| `tests/run/test_inspector.py` | `agents.interactive_textual` | Delete or migrate |
-| `tests/run/test_local.py` | `run.mini` | Delete or migrate |
-| `tests/run/test_run_hello_world.py` | `agents.default` | Delete or migrate |
-| `tests/run/test_save.py` | `agents.default` | Delete or migrate |
-| `tests/run/test_swebench.py` | `agents.default` | Delete or migrate |
-| `tests/run/test_swebench_single.py` | `agents.interactive` | Delete or migrate |
+| File | Stmts | Miss | Cover | Priority |
+|------|-------|------|-------|----------|
+| **agents/graph_extractor.py** | 66 | 66 | 0% | High |
+| **agents/swe_post_processor.py** | 70 | 70 | 0% | High |
+| **cli/interactive_runner.py** | 100 | 100 | 0% | High |
+| **db/migrator.py** | 90 | 90 | 0% | Medium |
+| **tools/confirming_executor.py** | 108 | 108 | 0% | High |
+| **interrupts/clarification_handler.py** | 37 | 37 | 0% | Medium |
+| observability/metrics.py | 60 | 49 | 18% | Medium |
+| services/code_indexer_service.py | 94 | 71 | 24% | Low |
+| services/graph_service.py | 102 | 78 | 24% | Low |
+| services/tool_health_service.py | 68 | 45 | 34% | Low |
+| orchestrator.py | 244 | 158 | 35% | Medium |
+| services/checkpoint_service.py | 57 | 36 | 37% | Low |
+| services/event_log_service.py | 57 | 36 | 37% | Low |
+| services/nli_service.py | 37 | 22 | 41% | Low |
+| services/working_memory_service.py | 90 | 48 | 47% | Low |
+| interrupts/cli_service.py | 98 | 50 | 49% | Low |
+| tools/catalog.py | 193 | 83 | 57% | Low |
+| interrupts/confirmation_handler.py | 52 | 19 | 63% | Low |
+| services/event_stream_service.py | 44 | 13 | 70% | Done |
+| wiring.py | 37 | 8 | 78% | Done |
+| interrupts/mode_manager.py | 50 | 8 | 84% | Done |
+| prompts/registry.py | 74 | 5 | 93% | Done |
+| config/pipeline.py | 36 | 1 | 97% | Done |
 
 ---
 
-## Broken Source Files
+## Missing Tests (Priority: High)
 
-These source files still import removed legacy modules:
+### 1. ConfirmingToolExecutor (`tools/confirming_executor.py`)
+- **Coverage**: 0%
+- **Purpose**: Tool executor with confirmation handling and health monitoring
+- **Tests needed**:
+  - `test_confirming_executor_requires_confirmation_for_high_risk`
+  - `test_confirming_executor_skips_confirmation_in_yolo_mode`
+  - `test_confirming_executor_records_tool_health`
+  - `test_confirming_executor_blocks_quarantined_tools`
 
-| Source File | Missing Import | Status |
-|-------------|----------------|--------|
-| `src/minisweagent/run/hello_world.py` | `agents.default.DefaultAgent` | Dead code |
-| `src/minisweagent/run/extra/github_issue.py` | `agents.interactive.InteractiveAgent` | Dead code |
-| `src/minisweagent/run/extra/inspector.py` | `agents.interactive_textual` | Dead code |
-| `src/minisweagent/run/extra/swebench.py` | `agents.default.DefaultAgent` | Dead code |
-| `src/minisweagent/run/extra/swebench_single.py` | `agents.interactive.InteractiveAgent` | Dead code |
+### 2. SWEPostProcessor (`agents/swe_post_processor.py`)
+- **Coverage**: 0%
+- **Purpose**: Completion detection and output processing
+- **Tests needed**:
+  - `test_post_processor_detects_completion_markers`
+  - `test_post_processor_extracts_bash_commands`
+  - `test_post_processor_handles_format_errors`
+  - `test_post_processor_handles_timeout`
+
+### 3. InteractiveRunner (`cli/interactive_runner.py`)
+- **Coverage**: 0%
+- **Purpose**: Interactive CLI for pipeline execution
+- **Tests needed**:
+  - `test_interactive_runner_displays_progress`
+  - `test_interactive_runner_handles_user_input`
+  - `test_interactive_runner_handles_keyboard_interrupt`
+
+### 4. GraphExtractor (`agents/graph_extractor.py`)
+- **Coverage**: 0%
+- **Purpose**: AST-based entity extraction for dependency graph
+- **Tests needed**:
+  - `test_graph_extractor_extracts_functions`
+  - `test_graph_extractor_extracts_classes`
+  - `test_graph_extractor_extracts_imports`
+  - `test_graph_extractor_builds_relationships`
+
+### 5. DBMigrator (`db/migrator.py`)
+- **Coverage**: 0%
+- **Purpose**: Database migration management
+- **Tests needed** (require PostgreSQL fixture):
+  - `test_migrator_applies_pending_migrations`
+  - `test_migrator_tracks_applied_migrations`
+  - `test_migrator_dry_run_mode`
+
+---
+
+## Service Tests (Priority: Medium)
+
+Services have 24-47% coverage and require database fixtures for full testing:
+
+| Service | Coverage | Notes |
+|---------|----------|-------|
+| CodeIndexerService | 24% | Requires pgvector |
+| GraphService | 24% | Requires PostgreSQL |
+| ToolHealthService | 34% | Requires PostgreSQL |
+| CheckpointService | 37% | Requires PostgreSQL |
+| EventLogService | 37% | Requires PostgreSQL |
+| NLIService | 41% | Requires sentence-transformers |
+| WorkingMemoryService | 47% | Requires PostgreSQL |
+
+**Recommendation**: Create a pytest fixture for PostgreSQL with pgvector to enable database-dependent tests.
+
+---
+
+## Legacy Code Removed
+
+### Removed Source Files (5 files)
+- `src/minisweagent/run/hello_world.py`
+- `src/minisweagent/run/extra/github_issue.py`
+- `src/minisweagent/run/extra/inspector.py`
+- `src/minisweagent/run/extra/swebench.py`
+- `src/minisweagent/run/extra/swebench_single.py`
+
+### Removed Test Files (9 files)
+- `tests/config/test_swebench_template.py`
+- `tests/run/test_cli_integration.py`
+- `tests/run/test_github_issue.py`
+- `tests/run/test_inspector.py`
+- `tests/run/test_local.py`
+- `tests/run/test_run_hello_world.py`
+- `tests/run/test_save.py`
+- `tests/run/test_swebench.py`
+- `tests/run/test_swebench_single.py`
+
+### Removed Reference Docs (9 files)
+- `docs/reference/run/swebench.md`
+- `docs/reference/run/hello_world.md`
+- `docs/reference/run/mini.md`
+- `docs/reference/run/github_issue.md`
+- `docs/reference/run/inspector.md`
+- `docs/reference/run/swebench_single.md`
+- `docs/reference/agents/default.md`
+- `docs/reference/agents/interactive.md`
+- `docs/reference/agents/textual.md`
 
 ---
 
 ## Working Integration Points
 
-The following jeeves-core integrations are fully wired and tested:
+### jeeves-core protocols (from submodule)
 
-### protocols.capability (from jeeves-core)
-
-| Component | Import | Tests Passing |
-|-----------|--------|---------------|
+| Component | Import | Tested |
+|-----------|--------|--------|
 | `CapabilityResourceRegistry` | `get_capability_resource_registry()` | Yes |
 | `DomainModeConfig` | Registered via `register_capability()` | Yes |
 | `DomainServiceConfig` | Registered via `register_capability()` | Yes |
 | `DomainAgentConfig` | Registered via `register_capability()` | Yes |
 | `CapabilityToolsConfig` | Registered via `register_capability()` | Yes |
 | `CapabilityOrchestratorConfig` | Registered via `register_capability()` | Yes |
-
-### protocols (from jeeves-core)
-
-| Component | Import | Tests Passing |
-|-----------|--------|---------------|
 | `AgentLLMConfig` | Used in `wiring.py` | Yes |
 
-### Capability Layer
+### Capability Layer Components
 
-| Component | File | Tests Passing |
-|-----------|------|---------------|
-| Tool Catalog | `capability/tools/catalog.py` | Yes (9 tests) |
-| Orchestrator | `capability/orchestrator.py` | Yes (12 tests) |
-| Pipeline Config | `capability/config/pipeline.py` | Yes (8 tests) |
-| Prompt Registry | `capability/prompts/registry.py` | Yes (7 tests) |
-| Interrupts | `capability/interrupts/` | Yes (12 tests) |
-| Wiring | `capability/wiring.py` | Yes (5 tests) |
-
----
-
-## Recommended Actions
-
-### Immediate (To Fix Test Suite)
-
-1. **Delete broken test files** - These test legacy code that no longer exists
-2. **Delete broken source files** - These are dead code that can't execute
-
-### Future (v2.0 Completion)
-
-Per `docs/v2-implementation-final-status.md`:
-
-1. **Phase 3: Legacy Removal** (0% complete)
-   - Remove backward compatibility wrappers
-   - Remove deprecated code paths
-   - Clean up unused imports
-
-2. **Add Tests** (8-12 hours estimated)
-   - Unit tests for service wrappers
-   - Integration tests for new tools
-   - E2E tests for session management
-
-3. **Update Documentation** (4-6 hours estimated)
-   - v1 -> v2 migration guide
-   - Database setup guide
-   - API reference updates
+| Component | File | Tests |
+|-----------|------|-------|
+| Tool Catalog | `capability/tools/catalog.py` | 16 tests |
+| Orchestrator | `capability/orchestrator.py` | 12 tests |
+| Pipeline Config | `capability/config/pipeline.py` | 8 tests |
+| Prompt Registry | `capability/prompts/registry.py` | 7 tests |
+| Interrupts | `capability/interrupts/` | 12 tests |
+| Wiring | `capability/wiring.py` | 5 tests |
 
 ---
 
@@ -149,15 +187,29 @@ Per `docs/v2-implementation-final-status.md`:
 pip install -e ".[dev]"
 pip install -e jeeves-core/protocols/
 
-# Run passing tests only
-pytest tests/capability/ tests/agents/ tests/config/ tests/environments/ tests/models/ \
-    --ignore=tests/config/test_swebench_template.py \
-    --ignore=tests/run/ \
-    -v
-
-# Full test run (includes broken legacy tests)
+# Run all tests
 pytest tests/ -v
+
+# Run capability tests only
+pytest tests/capability/ -v
+
+# Run with coverage
+pytest tests/ --cov=src/minisweagent --cov-report=term-missing
+
+# Run with HTML coverage report
+pytest tests/capability/ --cov=src/minisweagent/capability --cov-report=html:coverage_html
 ```
+
+---
+
+## Estimated Effort for Full Coverage
+
+| Task | Effort |
+|------|--------|
+| High-priority tests (5 files @ 0%) | 6-8 hours |
+| Medium-priority tests (services) | 4-6 hours |
+| PostgreSQL test fixtures | 2-3 hours |
+| **Total** | **12-17 hours** |
 
 ---
 
