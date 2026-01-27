@@ -30,7 +30,7 @@ class TestMiniSWEPromptRegistry:
 
         assert "mini_swe.system" in keys
         assert "mini_swe.instance" in keys
-        assert "mini_swe.swe_agent" in keys
+        assert "mini_swe.swe_agent" in keys  # Used by orchestrator unified mode
 
     def test_registry_has_pipeline_templates(self):
         """Test that registry has pipeline stage templates."""

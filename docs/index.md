@@ -1,46 +1,35 @@
 <div align="center">
-<img src="assets/mini-swe-agent-banner.svg" alt="mini-swe-agent banner" style="height: 7em"/>
 
-<h1 style="margin-bottom: 1ex;">The 100 line AI agent that's actually useful</h1>
+<h1 style="margin-bottom: 1ex;">jeeves-capability-mini-swe-agent</h1>
 
-</div>
-
-!!! warning "⚠️ v2.0 ahead! Beware of breaking changes."
-
-    See the [migration guide](advanced/v2_migration.md) for details.
-
-<div align="center">
-
-<a href="https://join.slack.com/t/swe-bench/shared_invite/zt-36pj9bu5s-o3_yXPZbaH2wVnxnss1EkQ">
-    <img src="https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white" alt="Slack">
-</a>
-<a href="https://github.com/SWE-agent/mini-swe-agent">
-    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/swe-agent/mini-swe-agent?style=for-the-badge&logo=github&label=GitHub&labelColor=black&color=green" alt="GitHub Release">
-</a>
-<a href="https://pypi.org/project/mini-swe-agent/">
-    <img src="https://img.shields.io/pypi/v/mini-swe-agent?style=for-the-badge&logo=python&logoColor=white&labelColor=black&color=deeppink" alt="PyPI - Version">
-</a>
+**A fork of mini-swe-agent with jeeves-core agentic kernel integration**
 
 </div>
-In 2024, [SWE-bench](https://swebench.com) & [SWE-agent](https://swe-agent.com) helped kickstart the coding agent revolution.
 
-We now ask: **What if the agent was 100x smaller, and still worked nearly as well?**
+!!! note "Fork Attribution"
 
-The `mini` agent is for
+    This is a **fork** of the excellent [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) by the Princeton & Stanford team.
+    This fork integrates [jeeves-core](https://github.com/Jeeves-Cluster-Organization/jeeves-core) for enhanced orchestration capabilities.
 
-- **Researchers** who want to **[benchmark](https://swe-bench.com), [fine-tune](https://swesmith.com/) or RL** without assumptions, bloat, or surprises
-- **Developers** who like to **own, understand, and modify** their tools
-- **Engineers** who want something **trivial to sandbox & to deploy anywhere**
+## What This Fork Adds
 
-Here's some details:
+This fork extends mini-swe-agent with **jeeves-core agentic kernel** for:
 
-- **Minimal**: Just [100 lines of python](https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/agents/default.py) (+100 total for [env](https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/environments/local.py),
-[model](https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/models/litellm_model.py), [script](https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/run/hello_world.py)) — no fancy dependencies!
-- **Performant:** Scores >74% on the [SWE-bench verified benchmark](https://www.swebench.com/) benchmark; starts faster than Claude Code
-- **Deployable:** In addition to local envs, you can use **docker**, **podman**, **singularity**, **apptainer**, and more
-- **Cutting edge:** Built by the Princeton & Stanford team behind [SWE-bench](https://swebench.com) and [SWE-agent](https://swe-agent.com).
-- **Widely adopted:** In use by Meta, NVIDIA, Essential AI, Anyscale, and others
-- **Tested:** [![Codecov](https://img.shields.io/codecov/c/github/swe-agent/mini-swe-agent?style=flat-square)](https://codecov.io/gh/SWE-agent/mini-swe-agent)
+- **Parallel Pipeline Execution**: Multi-stage pipelines with fan-out/fan-in patterns
+- **Local LLM Support**: Native support for llama-server, Ollama, and OpenAI-compatible servers
+- **Session Persistence**: Four-layer memory with PostgreSQL-backed state
+- **Event Streaming**: Real-time visibility into agent progress
+- **Resource Quotas**: Defense-in-depth bounds enforcement
+- **Tool Health Monitoring**: Automatic quarantine of failing tools
+
+## About the Original mini-swe-agent
+
+The original [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) is a minimal 100-line AI agent:
+
+- **Minimal**: Just 100 lines of python
+- **Performant**: Scores >74% on SWE-bench verified benchmark
+- **Deployable**: Supports docker, podman, singularity, apptainer, and more
+- **Built by**: Princeton & Stanford team behind [SWE-bench](https://swebench.com) and [SWE-agent](https://swe-agent.com)
 
 ??? note "Why use mini-SWE-agent for research?"
 
