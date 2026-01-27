@@ -49,6 +49,15 @@ from protocols.agents import (
 from protocols.config import AgentConfig, PipelineConfig, RoutingRule
 from protocols import RequestContext
 
+# Optional: CommBus for memory operations
+try:
+    from control_tower.ipc.commbus import InMemoryCommBus, CommBusProtocol
+    HAS_COMMBUS = True
+except ImportError:
+    HAS_COMMBUS = False
+    InMemoryCommBus = None
+    CommBusProtocol = None
+
 # v2.0 Services
 from minisweagent.capability.services import (
     WorkingMemoryService,
@@ -144,6 +153,7 @@ class SWEOrchestrator:
         persistence: Optional[Persistence] = None,
         prompt_registry: Optional[PromptRegistry] = None,
         control_tower: Optional[Any] = None,
+        commbus: Optional[Any] = None,
     ):
         self.config = config
         self.llm_factory = llm_factory
@@ -152,6 +162,7 @@ class SWEOrchestrator:
         self.persistence = persistence
         self.prompt_registry = prompt_registry
         self.control_tower = control_tower
+        self.commbus = commbus
         self._pipeline_runner: Optional[PipelineRunner] = None
 
         # v2.0: Database and services
@@ -231,6 +242,109 @@ class SWEOrchestrator:
 
         self._services_initialized = True
         logger.info("All v2.0 services initialized")
+
+    # =========================================================================
+    # CONTROL TOWER INTEGRATION
+    # =========================================================================
+
+    def _record_resource_usage(
+        self,
+        pid: str,
+        llm_calls: int = 0,
+        tool_calls: int = 0,
+        agent_hops: int = 0,
+        tokens_in: int = 0,
+        tokens_out: int = 0,
+    ) -> Optional[str]:
+        """Record resource usage via ControlTower.
+
+        Args:
+            pid: Process ID (envelope_id)
+            llm_calls: Number of LLM calls to record
+            tool_calls: Number of tool calls to record
+            agent_hops: Number of agent hops to record
+            tokens_in: Input tokens used
+            tokens_out: Output tokens used
+
+        Returns:
+            Quota exceeded reason if any, None otherwise
+        """
+        if self.control_tower is None:
+            return None
+
+        quota_exceeded = None
+
+        # Record LLM calls
+        for _ in range(llm_calls):
+            result = self.control_tower.record_llm_call(
+                pid, tokens_in=tokens_in // max(llm_calls, 1),
+                tokens_out=tokens_out // max(llm_calls, 1)
+            )
+            if result:
+                quota_exceeded = result
+
+        # Record tool calls
+        for _ in range(tool_calls):
+            result = self.control_tower.record_tool_call(pid)
+            if result:
+                quota_exceeded = result
+
+        # Record agent hops
+        for _ in range(agent_hops):
+            result = self.control_tower.record_agent_hop(pid)
+            if result:
+                quota_exceeded = result
+
+        return quota_exceeded
+
+    async def _query_session_state(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Query session state via CommBus if available.
+
+        Args:
+            session_id: Session ID to query
+
+        Returns:
+            Session state dict or None if unavailable
+        """
+        if self.commbus is None or not HAS_COMMBUS:
+            return None
+
+        try:
+            from memory_module.messages import GetSessionState
+            result = await self.commbus.query(GetSessionState(session_id=session_id))
+            return result
+        except Exception as e:
+            logger.debug(f"Failed to query session state: {e}")
+            return None
+
+    async def _update_session_focus(
+        self,
+        session_id: str,
+        focus_type: str,
+        focus_id: str,
+        focus_label: str = "",
+    ) -> None:
+        """Update session focus via CommBus if available.
+
+        Args:
+            session_id: Session ID
+            focus_type: Type of focus (e.g., "file", "function")
+            focus_id: ID of the focused item
+            focus_label: Human-readable label
+        """
+        if self.commbus is None or not HAS_COMMBUS:
+            return
+
+        try:
+            from memory_module.messages import UpdateFocus
+            await self.commbus.send(UpdateFocus(
+                session_id=session_id,
+                focus_type=focus_type,
+                focus_id=focus_id,
+                focus_label=focus_label,
+            ))
+        except Exception as e:
+            logger.debug(f"Failed to update session focus: {e}")
 
     async def close(self):
         """Clean up resources."""
@@ -563,6 +677,16 @@ class SWEOrchestrator:
                     metadata={"llm_calls": result_envelope.llm_call_count}
                 )
 
+            # Record resource usage via ControlTower
+            if self.control_tower:
+                quota_exceeded = self._record_resource_usage(
+                    pid=envelope.envelope_id,
+                    llm_calls=result_envelope.llm_call_count,
+                    agent_hops=result_envelope.agent_hop_count,
+                )
+                if quota_exceeded:
+                    logger.warning(f"Resource quota exceeded: {quota_exceeded}")
+
             # v2.0: Save checkpoint
             if self.checkpoint_service:
                 await self.checkpoint_service.save_checkpoint(
@@ -825,6 +949,7 @@ def create_swe_orchestrator(
     persistence: Optional[Persistence] = None,
     prompt_registry: Optional[PromptRegistry] = None,
     control_tower: Optional[Any] = None,
+    commbus: Optional[Any] = None,
     **config_kwargs,
 ) -> SWEOrchestrator:
     """Factory function to create an SWE orchestrator (v2.0).
@@ -837,7 +962,8 @@ def create_swe_orchestrator(
         log: Logger instance
         persistence: State persistence
         prompt_registry: Prompt template registry
-        control_tower: Control tower for lifecycle management
+        control_tower: Control tower for lifecycle management (jeeves-core kernel)
+        commbus: CommBus for inter-service communication (memory queries, events)
         **config_kwargs: Additional config options including v2.0:
             - database_url: PostgreSQL connection URL
             - enable_sessions: Enable session persistence
@@ -849,6 +975,17 @@ def create_swe_orchestrator(
 
     Returns:
         SWEOrchestrator instance
+
+    Example:
+        # With jeeves-core context
+        from minisweagent.capability.wiring import create_jeeves_context
+
+        context = create_jeeves_context()
+        orchestrator = create_swe_orchestrator(
+            control_tower=context.control_tower,
+            commbus=context.commbus,
+            llm_factory=my_factory,
+        )
     """
     config = SWEOrchestratorConfig(**config_kwargs)
 
@@ -860,6 +997,7 @@ def create_swe_orchestrator(
         persistence=persistence,
         prompt_registry=prompt_registry,
         control_tower=control_tower,
+        commbus=commbus,
     )
 
 
