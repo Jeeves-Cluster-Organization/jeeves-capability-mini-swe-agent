@@ -92,18 +92,7 @@ mini-jeeves db status
 
 ## Usage
 
-### Legacy Mode (Original mini-swe-agent behavior)
-
-The original `mini` command continues to work:
-
-```bash
-mini -t "Fix the bug in auth.py"
-mini -v  # Visual UI
-```
-
-### Jeeves Integration Mode (v2.0)
-
-Use `mini-jeeves` for access to jeeves-core features:
+Use `mini-jeeves` (or the aliases `mini` / `mini-swe-agent`) for v2.0 features:
 
 ```bash
 # Basic run
