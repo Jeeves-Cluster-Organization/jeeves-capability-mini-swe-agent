@@ -801,12 +801,5 @@ def run(
     return result
 
 
-# Keep backward compatibility with 'main' command name
-@app.command("main", hidden=True)
-def main_compat(**kwargs):
-    """Backward compatible main command."""
-    return run(**kwargs)
-
-
 if __name__ == "__main__":
     app()

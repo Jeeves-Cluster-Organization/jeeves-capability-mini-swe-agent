@@ -83,7 +83,6 @@ class TestAgentLLMConfigs:
         agent_names_defined = {a.name for a in AGENT_DEFINITIONS}
 
         # All defined agents should have LLM configs (or inherit from another)
-        # swe_agent is special - it's the legacy single-agent mode
         for agent_name in agent_names_defined:
             assert (
                 agent_name in agent_names_with_configs

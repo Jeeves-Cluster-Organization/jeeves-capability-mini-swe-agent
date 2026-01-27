@@ -18,26 +18,12 @@ class TestPipelineMode:
         """Test PipelineMode has expected values."""
         from minisweagent.capability.config.pipeline import PipelineMode
 
-        assert PipelineMode.SINGLE_AGENT.value == "single_agent"
         assert PipelineMode.SEQUENTIAL.value == "sequential"
         assert PipelineMode.PARALLEL.value == "parallel"
 
 
 class TestPipelineConfig:
     """Tests for pipeline configuration creation."""
-
-    def test_create_single_agent_config(self):
-        """Test creating single-agent pipeline config."""
-        from minisweagent.capability.config.pipeline import (
-            create_single_agent_config,
-        )
-
-        config = create_single_agent_config()
-
-        assert config.name == "mini_swe_single_agent"
-        assert len(config.agents) == 1
-        assert config.agents[0].name == "swe_agent"
-        assert config.agents[0].has_tools is True
 
     def test_create_sequential_pipeline_config(self):
         """Test creating sequential pipeline config."""

@@ -1,9 +1,8 @@
 """Pipeline Configuration for Mini-SWE-Agent.
 
 This module defines pipeline configurations for different execution modes:
-1. SINGLE_AGENT: Legacy single-agent loop
-2. SEQUENTIAL: Multi-stage sequential pipeline
-3. PARALLEL: Multi-stage with parallel analysis
+1. SEQUENTIAL: Multi-stage sequential pipeline
+2. PARALLEL: Multi-stage with parallel analysis
 
 Pipeline Architecture:
 ```
@@ -17,10 +16,9 @@ concurrently via Go's goroutines when using jeeves-core's parallel mode.
 """
 
 import sys
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 # Add jeeves-core to path
 _jeeves_core_path = Path(__file__).parent.parent.parent.parent.parent.parent / "jeeves-core"
@@ -38,7 +36,6 @@ from protocols.config import (
 
 class PipelineMode(str, Enum):
     """Pipeline execution modes."""
-    SINGLE_AGENT = "single_agent"
     SEQUENTIAL = "sequential"
     PARALLEL = "parallel"
 
@@ -192,23 +189,6 @@ def _create_verifier_config() -> AgentConfig:
     )
 
 
-def _create_swe_agent_config() -> AgentConfig:
-    """Create configuration for single-agent mode (legacy)."""
-    return AgentConfig(
-        name="swe_agent",
-        output_key="result",
-        has_llm=True,
-        has_tools=True,
-        model_role="swe_agent",
-        allowed_tools=["bash_execute"],
-        tool_access="all",
-        default_next="end",
-        temperature=0.3,
-        max_tokens=4000,
-        prompt_key="mini_swe.swe_agent",
-    )
-
-
 # =============================================================================
 # PIPELINE CONFIGURATIONS
 # =============================================================================
@@ -222,7 +202,7 @@ def create_swe_pipeline_config(
     """Create pipeline configuration for SWE execution.
 
     Args:
-        mode: Pipeline execution mode
+        mode: Pipeline execution mode (SEQUENTIAL or PARALLEL)
         max_iterations: Maximum pipeline iterations
         max_llm_calls: Maximum LLM calls across all agents
         max_agent_hops: Maximum agent transitions
@@ -230,9 +210,6 @@ def create_swe_pipeline_config(
     Returns:
         PipelineConfig for the specified mode
     """
-    if mode == PipelineMode.SINGLE_AGENT:
-        return create_single_agent_config(max_iterations, max_llm_calls, max_agent_hops)
-
     is_parallel = mode == PipelineMode.PARALLEL
 
     agents: List[AgentConfig] = [
@@ -262,37 +239,7 @@ def create_swe_pipeline_config(
     )
 
 
-def create_single_agent_config(
-    max_iterations: int = 50,
-    max_llm_calls: int = 100,
-    max_agent_hops: int = 200,
-) -> PipelineConfig:
-    """Create single-agent pipeline configuration (legacy mode).
-
-    This configuration creates a pipeline with a single SWE agent
-    that handles all tasks, matching the original mini-swe-agent behavior.
-
-    Args:
-        max_iterations: Maximum pipeline iterations
-        max_llm_calls: Maximum LLM calls
-        max_agent_hops: Maximum agent transitions
-
-    Returns:
-        PipelineConfig for single-agent mode
-    """
-    return PipelineConfig(
-        name="mini_swe_single_agent",
-        max_iterations=max_iterations,
-        max_llm_calls=max_llm_calls,
-        max_agent_hops=max_agent_hops,
-        agents=[_create_swe_agent_config()],
-        clarification_resume_stage="swe_agent",
-        confirmation_resume_stage="swe_agent",
-    )
-
-
 __all__ = [
     "PipelineMode",
     "create_swe_pipeline_config",
-    "create_single_agent_config",
 ]

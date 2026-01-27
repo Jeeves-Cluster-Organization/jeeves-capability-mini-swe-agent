@@ -105,15 +105,6 @@ AGENT_LLM_CONFIGS = {
         context_window=16384,
         timeout_seconds=120,
     ),
-    # Legacy: single agent mode (matches current mini behavior)
-    "swe_agent": AgentLLMConfig(
-        agent_name="swe_agent",
-        model="qwen2.5-7b-instruct-q4_k_m",
-        temperature=0.3,
-        max_tokens=4000,
-        context_window=32768,
-        timeout_seconds=300,
-    ),
 }
 
 
@@ -158,12 +149,6 @@ AGENT_DEFINITIONS = [
         layer="validation",
         tools=["bash_execute", "run_tests"],
     ),
-    DomainAgentConfig(
-        name="swe_agent",
-        description="Single-agent mode for legacy compatibility",
-        layer="execution",
-        tools=["bash_execute"],
-    ),
 ]
 
 
@@ -184,7 +169,7 @@ def _create_tool_catalog():
 def _create_orchestrator_service(
     llm_factory,
     tool_executor,
-    logger,
+    log,
     persistence,
     control_tower=None,
 ):
@@ -196,7 +181,7 @@ def _create_orchestrator_service(
     return create_swe_orchestrator(
         llm_factory=llm_factory,
         tool_executor=tool_executor,
-        logger=logger,
+        log=log,
         persistence=persistence,
         control_tower=control_tower,
     )
