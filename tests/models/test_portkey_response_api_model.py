@@ -3,6 +3,9 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+# Skip this test module if portkey-ai is not installed
+pytest.importorskip("portkey_ai", reason="portkey-ai not installed (optional dependency)")
+
 from minisweagent.models import GLOBAL_MODEL_STATS
 from minisweagent.models.portkey_response_api_model import PortkeyResponseAPIModel
 

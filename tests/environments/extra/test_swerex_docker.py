@@ -1,6 +1,19 @@
+import shutil
+
 import pytest
 
+swerex = pytest.importorskip("swerex", reason="swerex not installed (optional dependency)")
+
 from minisweagent.environments.extra.swerex_docker import SwerexDockerEnvironment
+
+# Skip all tests if Docker is not available
+pytestmark = [
+    pytest.mark.slow,
+    pytest.mark.skipif(
+        shutil.which("docker") is None,
+        reason="Docker not available"
+    ),
+]
 
 
 @pytest.mark.slow

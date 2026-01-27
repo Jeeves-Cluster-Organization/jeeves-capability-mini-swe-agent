@@ -1,12 +1,24 @@
 # API Reference
 
-This section provides detailed documentation for all classes and modules in mini-SWE-agent.
+This section provides detailed documentation for all classes and modules in mini-SWE-agent v2.0.
 
-## Agents
+## Capability Layer (v2.0)
 
-- **[DefaultAgent](agents/default.md)** - The minimal default agent implementation
-- **[InteractiveAgent](agents/interactive.md)** - Agent with human-in-the-loop functionality
-- **[TextualAgent](agents/textual.md)** - Agent with interactive TUI using Textual
+The v2.0 architecture uses jeeves-core's PipelineRunner. Agent behavior is defined in:
+
+- `minisweagent.capability.orchestrator` - SWE Orchestrator for pipeline execution
+- `minisweagent.capability.wiring` - Agent definitions and LLM configurations
+- `minisweagent.capability.tools.catalog` - Tool definitions and registration
+
+### Key Components
+
+| Component | Module | Description |
+|-----------|--------|-------------|
+| SWEOrchestrator | `capability.orchestrator` | Pipeline execution and service coordination |
+| ToolCatalog | `capability.tools.catalog` | Tool registration and definitions |
+| PromptRegistry | `capability.prompts.registry` | Prompt templates for agents |
+| InteractiveRunner | `capability.cli.interactive_runner` | CLI execution with interrupt handling |
+| ConfirmingExecutor | `capability.tools.confirming_executor` | Tool execution with confirmation |
 
 ## Models
 
@@ -23,14 +35,25 @@ This section provides detailed documentation for all classes and modules in mini
 - **[SwerexDockerEnvironment](environments/swerex_docker.md)** - Extended Docker environment with SWE-Rex integration
 - **[SwerexModalEnvironment](environments/swerex_modal.md)** - Modal cloud environment with SWE-Rex integration
 
+## CLI Commands (v2.0)
 
-## Run Scripts
+The primary CLI is `mini-jeeves`. See [Usage Guide](../usage/mini.md) for details.
 
-Entry points and command-line interfaces:
+```bash
+# Basic usage
+mini-jeeves run -t "Fix the bug in auth.py"
 
-- **[Hello World](run/hello_world.md)** - Simple example usage
-- **[mini](run/mini.md)** - Interactive local execution
-- **[GitHub Issue](run/github_issue.md)** - GitHub issue solver
-- **[SWE-bench](run/swebench.md)** - SWE-bench evaluation script
+# With session persistence
+mini-jeeves run -t "Task" --new-session
+mini-jeeves list-sessions
+
+# Database commands
+mini-jeeves db migrate
+mini-jeeves db status
+```
+
+## Configuration
+
+- **[Config Module](run/config.md)** - Configuration utilities
 
 {% include-markdown "../_footer.md" %}
