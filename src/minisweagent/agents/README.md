@@ -1,6 +1,13 @@
-# Agent implementations
+# Agent Implementations
 
-* `default.py` - Minimal default agent implementation.
-* `interactive.py` - Extends `default.py` with some minimal human-in-the-loop functionality (confirm actions, etc.).
-* `interactive_textual.py` - Extends `default.py` with [Textual](https://textual.textualize.io/) for an interactive TUI.
-   (this is a more complicated UI).
+**v2.0 Architecture**
+
+Legacy agent implementations (`default.py`, `interactive.py`, `interactive_textual.py`) have been removed.
+
+All agent behavior now flows through jeeves-core's PipelineRunner:
+
+- `minisweagent.capability.orchestrator` - SWE Orchestrator for pipeline execution
+- `minisweagent.capability.agents.swe_post_processor` - Post-processing logic
+- `minisweagent.capability.cli.interactive_runner` - Interactive CLI runner
+
+See `minisweagent.capability.wiring` for agent definitions and LLM configurations.
