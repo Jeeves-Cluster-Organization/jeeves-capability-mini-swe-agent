@@ -1,57 +1,42 @@
-# Inspector: Browse agent trajectories
+# Inspector
 
-!!! abstract "Overview"
+!!! warning "Removed in v2.0"
 
-    * The `inspector` is a tool that allows you to browse `.traj.json` files that show the history of a mini-SWE-agent run.
-    * Quickly start it with `mini-e i` or `mini-extra inspector`.
+    The `inspector` tool has been removed in the v2.0 migration.
 
-<figure markdown="span">
-  <div class="gif-container gif-container-styled" data-glightbox-disabled>
-    <img src="https://github.com/SWE-agent/swe-agent-media/blob/main/media/mini/png/inspector.png?raw=true"
-         data-gif="https://github.com/SWE-agent/swe-agent-media/blob/main/media/mini/gif/inspector.gif?raw=true"
-         alt="inspector" data-glightbox="false" width="600" />
-  </div>
-</figure>
+    For trajectory browsing, see the original [swe-agent/mini-swe-agent](https://github.com/swe-agent/mini-swe-agent) repository.
 
-## Usage
+## v2.0 Alternatives
+
+In v2.0, session and execution history can be accessed via:
+
+### Session Management
 
 ```bash
-# Find all .traj.json files recursively from current directory
-mini-extra inspector
-# or shorter
-mini-e i
-# Open the inspector for a specific file
-mini-e i <path_to_traj.json>
-# Search for trajectory files in a specific directory
-mini-e i <path_to_directory>
+# List all sessions
+mini-jeeves list-sessions
+
+# View session details (if database configured)
+mini-jeeves session-info <session_id>
 ```
 
-## Key bindings
+### Event Logs
 
-- `q`: Quit the inspector
-- `h`/`LEFT`: Previous step
-- `l`/`RIGHT`: Next step
-- `j`/`DOWN`: Scroll down
-- `k`/`UP`: Scroll up
-- `H`: Previous trajectory
-- `L`: Next trajectory
+If PostgreSQL is configured, execution events are logged to the `event_log` table and can be queried directly:
 
-### FAQ
+```sql
+SELECT * FROM event_log
+WHERE session_id = 'your_session_id'
+ORDER BY timestamp;
+```
 
-> How can I select/copy text on the screen?
+### Prometheus Metrics
 
-Hold down the `Alt`/`Option` key and use the mouse to select the text.
+For real-time monitoring:
 
-## Implementation
-
-The inspector is implemented with [textual](https://textual.textualize.io/).
-
-??? note "Implementation"
-
-    - [Read on GitHub](https://github.com/swe-agent/mini-swe-agent/blob/main/src/minisweagent/run/extra/inspector.py)
-
-    ```python linenums="1"
-    --8<-- "src/minisweagent/run/extra/inspector.py"
-    ```
+```bash
+mini-jeeves run -t "Task" --enable-metrics
+# View metrics at http://localhost:9090/metrics
+```
 
 {% include-markdown "../_footer.md" %}

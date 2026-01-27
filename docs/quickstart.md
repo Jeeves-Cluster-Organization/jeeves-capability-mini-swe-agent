@@ -20,9 +20,11 @@ pip install -e ".[dev]"
 Then run:
 
 ```bash
-mini  # simple UI (legacy mode)
-mini -v  # visual UI (legacy mode)
-mini-jeeves -t "Fix the bug" --mode parallel  # jeeves integration mode
+# v2.0 CLI (recommended)
+mini-jeeves run -t "Fix the bug in auth.py"
+
+# With session persistence (requires PostgreSQL)
+mini-jeeves run -t "Fix the bug" --new-session
 ```
 
 ### Original mini-swe-agent (upstream)

@@ -1,78 +1,128 @@
-# `mini`
+# `mini-jeeves`
 
 !!! abstract "Overview"
 
-    * `mini` is a REPL-style interactive command line interface for using mini-SWE-agent in the local requirement (as opposed for workflows that require sandboxing or large scale batch processing).
-    * Compared to [`mini -v`](mini_v.md), `mini` is more lightweight and does not require threading.
+    * `mini-jeeves` is the v2.0 CLI for mini-SWE-agent, integrated with jeeves-core.
+    * It provides session persistence, semantic search, and tool health monitoring.
+    * For legacy usage, see the original swe-agent/mini-swe-agent repository.
 
-!!! tip "Feedback wanted!"
-    Give feedback on the `mini` and `mini -v` interfaces at [this github issue](https://github.com/swe-agent/mini-swe-agent/issues/161)
-    or in our [Slack channel](https://join.slack.com/t/swe-bench/shared_invite/zt-36pj9bu5s-o3_yXPZbaH2wVnxnss1EkQ).
+## Basic Usage
 
-<figure markdown="span">
-  <div class="gif-container gif-container-styled" data-glightbox-disabled>
-    <img src="https://github.com/SWE-agent/swe-agent-media/blob/main/media/mini/png/mini.png?raw=true"
-         data-gif="https://github.com/SWE-agent/swe-agent-media/blob/main/media/mini/gif/mini.gif?raw=true"
-         alt="mini" data-glightbox="false" width="600" />
-  </div>
-</figure>
+```bash
+# Run with a task
+mini-jeeves run -t "Fix the bug in auth.py"
 
+# Run with a config file
+mini-jeeves run -t "Task" -c mini_v2.yaml
 
-## Command line options
+# Run with a specific model
+mini-jeeves run -t "Task" -m claude-sonnet-4-20250514
+```
 
-Useful switches:
+## Session Management
 
-- `-h`/`--help`: Show help
-- `-t`/`--task`: Specify a task to run (else you will be prompted)
-- `-c`/`--config`: Specify a config file to use, else we will use [`mini.yaml`](https://github.com/swe-agent/mini-swe-agent/blob/main/src/minisweagent/config/mini.yaml) or the config `MSWEA_MINI_CONFIG_PATH` environment variable (see [global configuration](../advanced/global_configuration.md)).
-  It's enough to specify the name of the config file, e.g., `-c mini.yaml` (see [global configuration](../advanced/global_configuration.md) for how it is resolved).
-- `-m`/`--model`: Specify a model to use, else we will use the model `MSWEA_MODEL_NAME` environment variable (see [global configuration](../advanced/global_configuration.md))
-- `-y`/`--yolo`: Start in `yolo` mode (see below)
+```bash
+# Start a new session (persists state across runs)
+mini-jeeves run -t "Fix auth bug" --new-session
 
-## Modes of operation
+# List existing sessions
+mini-jeeves list-sessions
 
-`mini` provides three different modes of operation
+# Resume a session
+mini-jeeves run -t "Continue fixing" --session session_20260127_123456
 
-- `confirm` (`/c`): The LM proposes an action and the user is prompted to confirm (press Enter) or reject (enter a rejection message)
-- `yolo` (`/y`): The action from the LM is executed immediately without confirmation
+# Delete a session
+mini-jeeves session-delete <session_id>
+```
+
+## Database Commands
+
+v2.0 features require PostgreSQL with pgvector. Setup:
+
+```bash
+# Set database URL
+export MSWEA_DATABASE_URL="postgresql://user:pass@localhost/mswea"
+
+# Run migrations
+mini-jeeves db migrate
+
+# Check migration status
+mini-jeeves db status
+```
+
+## Semantic Search
+
+```bash
+# Index your codebase
+mini-jeeves index . --pattern "**/*.py"
+
+# Search for code
+mini-jeeves search "authentication logic"
+```
+
+## Dependency Graph
+
+```bash
+# Build dependency graph
+mini-jeeves graph-build .
+
+# Query dependencies
+mini-jeeves graph-deps src/auth.py --direction depends_on
+```
+
+## Tool Health
+
+```bash
+# View tool health status
+mini-jeeves tool-health
+
+# Reset a quarantined tool
+mini-jeeves tool-reset bash_execute
+```
+
+## Observability
+
+```bash
+# Enable Prometheus metrics
+mini-jeeves run -t "Task" --enable-metrics --metrics-port 9090
+
+# Then visit http://localhost:9090/metrics
+```
+
+## Modes of Operation
+
+`mini-jeeves` provides three execution modes:
+
+- `confirm` (`/c`): The LM proposes an action and the user confirms (Enter) or rejects
+- `yolo` (`/y`): Actions are executed immediately without confirmation
 - `human` (`/u`): The user takes over to type and execute commands
 
-You can switch between the modes with the `/c`, `/y`, and `/u` commands that you can enter any time the agent is waiting for input.
-You can also press `Ctrl+C` to interrupt the agent at any time, allowing you to switch between modes.
+Start in yolo mode:
+```bash
+mini-jeeves run -t "Task" -y
+```
 
-`mini` starts in `confirm` mode by default. To start in `yolo` mode, you can add `-y`/`--yolo` to the command line.
+Switch modes during execution with `/c`, `/y`, or `/u` commands.
 
-## Miscellaneous tips
+## Command Line Options
 
-- `mini` saves the full history of your last run to your global config directory.
-  The path to the directory is printed when you start `mini`.
+| Option | Description |
+|--------|-------------|
+| `-t`, `--task` | Task description |
+| `-c`, `--config` | Config file path |
+| `-m`, `--model` | Model name |
+| `-y`, `--yolo` | Start in yolo mode |
+| `--new-session` | Start a new session |
+| `--session` | Resume existing session |
+| `--enable-metrics` | Enable Prometheus metrics |
+| `--metrics-port` | Metrics server port (default: 9090) |
 
 ## Implementation
 
-??? note "Default config"
+The v2.0 CLI is implemented using:
 
-    - [Read on GitHub](https://github.com/swe-agent/mini-swe-agent/blob/main/src/minisweagent/config/mini.yaml)
-
-    ```yaml
-    --8<-- "src/minisweagent/config/mini.yaml"
-    ```
-
-??? note "Run script"
-
-    - [Read on GitHub](https://github.com/swe-agent/mini-swe-agent/blob/main/src/minisweagent/run/mini.py)
-    - [API reference](../reference/run/mini.md)
-
-    ```python
-    --8<-- "src/minisweagent/run/mini.py"
-    ```
-
-??? note "Agent class"
-
-    - [Read on GitHub](https://github.com/swe-agent/mini-swe-agent/blob/main/src/minisweagent/agents/interactive.py)
-    - [API reference](../reference/agents/interactive.md)
-
-    ```python
-    --8<-- "src/minisweagent/agents/interactive.py"
-    ```
+- `minisweagent.capability.orchestrator` - Pipeline execution
+- `minisweagent.capability.cli.interactive_runner` - Interactive CLI
+- `minisweagent.capability.wiring` - Agent configuration
 
 {% include-markdown "../_footer.md" %}
