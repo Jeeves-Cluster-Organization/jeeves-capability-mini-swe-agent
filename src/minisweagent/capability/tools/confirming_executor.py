@@ -1,10 +1,11 @@
 """Confirming tool executor wrapper.
 
 This module provides a ToolExecutor wrapper that adds confirmation
-handling before executing HIGH-risk tools.
+handling before executing HIGH-risk tools and tool health monitoring (L7).
 """
 
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -26,11 +27,14 @@ from minisweagent.capability.interrupts.mode_manager import (
 
 
 class ConfirmingToolExecutor:
-    """Tool executor that requires confirmation for HIGH-risk tools.
+    """Tool executor that requires confirmation for HIGH-risk tools and monitors tool health (L7).
 
-    Wraps another tool executor and adds confirmation checks before
-    executing HIGH-risk tools. Uses the interrupt system to pause
-    execution and wait for user approval.
+    Wraps another tool executor and adds:
+    1. Confirmation checks for HIGH-risk tools
+    2. Tool health monitoring (success/failure tracking)
+    3. Automatic quarantine of failing tools
+
+    Uses the interrupt system to pause execution and wait for user approval.
     """
 
     def __init__(
@@ -39,6 +43,7 @@ class ConfirmingToolExecutor:
         confirmation_handler: ConfirmationHandler,
         interrupt_service: CLIInterruptService,
         mode_manager: ModeManager,
+        tool_health_service: Optional[Any] = None,
         request_id: str = "",
         user_id: str = "anonymous",
         session_id: str = "",
@@ -50,6 +55,7 @@ class ConfirmingToolExecutor:
             confirmation_handler: Handler for confirmation logic
             interrupt_service: Service for managing interrupts
             mode_manager: Manager for execution modes
+            tool_health_service: Optional tool health service for monitoring (L7)
             request_id: Current request ID
             user_id: Current user ID
             session_id: Current session ID
@@ -58,6 +64,7 @@ class ConfirmingToolExecutor:
         self._confirmation_handler = confirmation_handler
         self._interrupt_service = interrupt_service
         self._mode_manager = mode_manager
+        self._tool_health_service = tool_health_service
         self._request_id = request_id
         self._user_id = user_id
         self._session_id = session_id
@@ -67,7 +74,7 @@ class ConfirmingToolExecutor:
         tool_name: str,
         params: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Execute a tool with confirmation check.
+        """Execute a tool with confirmation check and health monitoring.
 
         Args:
             tool_name: Name of the tool to execute
@@ -76,6 +83,19 @@ class ConfirmingToolExecutor:
         Returns:
             Tool execution result or rejection status
         """
+        # Check tool health status (L7)
+        if self._tool_health_service:
+            status = await self._tool_health_service.get_tool_status(tool_name)
+            if status == "quarantined":
+                return {
+                    "status": "quarantined",
+                    "error": f"Tool {tool_name} is quarantined due to high failure rate (>50%). Use tool-reset to unquarantine.",
+                    "tool_name": tool_name,
+                }
+            elif status == "degraded":
+                # Log warning but allow execution
+                print(f"⚠️  Warning: Tool {tool_name} is degraded (10-50% error rate)")
+
         # Sync mode manager with confirmation handler
         self._confirmation_handler.mode = self._mode_manager.mode.value
 
@@ -109,8 +129,33 @@ class ConfirmingToolExecutor:
                 "message": interrupt.message,
             }
 
-        # No confirmation needed, execute directly
-        return await self._inner.execute(tool_name, params)
+        # Execute tool with health monitoring
+        start_time = time.time()
+        success = False
+        error_message = None
+
+        try:
+            result = await self._inner.execute(tool_name, params)
+            success = result.get("status") in ("success", "completed", None)
+            error_message = result.get("error") if not success else None
+            return result
+        except Exception as e:
+            error_message = str(e)
+            raise
+        finally:
+            # Record invocation (L7)
+            if self._tool_health_service:
+                latency_ms = int((time.time() - start_time) * 1000)
+                try:
+                    await self._tool_health_service.record_invocation(
+                        tool_name=tool_name,
+                        success=success,
+                        latency_ms=latency_ms,
+                        error_message=error_message,
+                    )
+                except Exception:
+                    # Don't fail execution if health monitoring fails
+                    pass
 
     async def execute_with_confirmation(
         self,
@@ -132,8 +177,32 @@ class ConfirmingToolExecutor:
         action, message = self._mode_manager.handle_response(response)
 
         if action == ResponseAction.APPROVED:
-            # User approved, execute the tool
-            return await self._inner.execute(tool_name, params)
+            # User approved, execute with health monitoring
+            start_time = time.time()
+            success = False
+            error_message = None
+
+            try:
+                result = await self._inner.execute(tool_name, params)
+                success = result.get("status") in ("success", "completed", None)
+                error_message = result.get("error") if not success else None
+                return result
+            except Exception as e:
+                error_message = str(e)
+                raise
+            finally:
+                # Record invocation (L7)
+                if self._tool_health_service:
+                    latency_ms = int((time.time() - start_time) * 1000)
+                    try:
+                        await self._tool_health_service.record_invocation(
+                            tool_name=tool_name,
+                            success=success,
+                            latency_ms=latency_ms,
+                            error_message=error_message,
+                        )
+                    except Exception:
+                        pass
 
         elif action == ResponseAction.REJECTED:
             # User rejected, return rejection status
@@ -147,7 +216,31 @@ class ConfirmingToolExecutor:
             # Mode switched, re-evaluate confirmation
             # If now in yolo mode, execute directly
             if self._mode_manager.is_yolo_mode():
-                return await self._inner.execute(tool_name, params)
+                # Execute with health monitoring
+                start_time = time.time()
+                success = False
+                error_message = None
+
+                try:
+                    result = await self._inner.execute(tool_name, params)
+                    success = result.get("status") in ("success", "completed", None)
+                    error_message = result.get("error") if not success else None
+                    return result
+                except Exception as e:
+                    error_message = str(e)
+                    raise
+                finally:
+                    if self._tool_health_service:
+                        latency_ms = int((time.time() - start_time) * 1000)
+                        try:
+                            await self._tool_health_service.record_invocation(
+                                tool_name=tool_name,
+                                success=success,
+                                latency_ms=latency_ms,
+                                error_message=error_message,
+                            )
+                        except Exception:
+                            pass
             # Otherwise, return status indicating mode switch
             return {
                 "status": "mode_switched",
@@ -190,6 +283,7 @@ def create_confirming_executor(
     inner_executor: ToolExecutor,
     mode: str = "confirm",
     whitelist_patterns: Optional[list] = None,
+    tool_health_service: Optional[Any] = None,
 ) -> ConfirmingToolExecutor:
     """Factory function to create a confirming tool executor.
 
@@ -197,6 +291,7 @@ def create_confirming_executor(
         inner_executor: The underlying tool executor
         mode: Initial execution mode (yolo, confirm, human)
         whitelist_patterns: Patterns for commands that skip confirmation
+        tool_health_service: Optional tool health service for monitoring (L7)
 
     Returns:
         ConfirmingToolExecutor instance
@@ -219,6 +314,7 @@ def create_confirming_executor(
         confirmation_handler=confirmation_handler,
         interrupt_service=interrupt_service,
         mode_manager=mode_manager,
+        tool_health_service=tool_health_service,
     )
 
 

@@ -59,6 +59,10 @@ class ToolId(str, Enum):
     # Test tools
     RUN_TESTS = "run_tests"
 
+    # v2.0 tools
+    SEMANTIC_SEARCH = "semantic_search"
+    GRAPH_QUERY = "graph_query"
+
 
 # =============================================================================
 # TOOL IMPLEMENTATIONS
@@ -398,6 +402,188 @@ async def grep_search(
         }
 
 
+async def semantic_search(
+    query: str,
+    limit: int = 5,
+    min_score: float = 0.7,
+) -> Dict[str, Any]:
+    """Search codebase using natural language query (L3 semantic search).
+
+    This tool uses embeddings to find code semantically similar to the query.
+    Much better than grep for conceptual searches.
+
+    Args:
+        query: Natural language description of code to find
+        limit: Maximum number of results
+        min_score: Minimum similarity score (0-1)
+
+    Returns:
+        Dict with 'results', 'count', and 'status' keys
+
+    Example:
+        semantic_search("password validation logic", limit=5)
+        semantic_search("database connection setup", limit=3, min_score=0.8)
+    """
+    try:
+        # Import service (lazy load)
+        from minisweagent.capability.services import CodeIndexerService
+        import asyncpg
+
+        # Get database connection
+        db_url = os.getenv("MSWEA_DATABASE_URL")
+        if not db_url:
+            return {
+                "status": "error",
+                "error": "MSWEA_DATABASE_URL not set. Semantic search requires database.",
+                "results": [],
+                "count": 0,
+            }
+
+        # Connect and search
+        conn = await asyncpg.connect(db_url)
+        try:
+            indexer = CodeIndexerService(conn)
+            chunks = await indexer.search(query, limit=limit, min_score=min_score)
+
+            results = [
+                {
+                    "file": chunk.source_file,
+                    "content": chunk.content,
+                    "score": chunk.score,
+                    "line_start": chunk.metadata.get("line_start"),
+                    "line_end": chunk.metadata.get("line_end"),
+                }
+                for chunk in chunks
+            ]
+
+            return {
+                "status": "success",
+                "results": results,
+                "count": len(results),
+                "query": query,
+            }
+        finally:
+            await conn.close()
+
+    except ImportError as e:
+        return {
+            "status": "error",
+            "error": f"Missing dependency: {e}. Install with: pip install sentence-transformers",
+            "results": [],
+            "count": 0,
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "results": [],
+            "count": 0,
+        }
+
+
+async def graph_query(
+    query_type: str,
+    node_id: str,
+    max_depth: int = 3,
+) -> Dict[str, Any]:
+    """Query code dependency graph (L5 graph storage).
+
+    This tool queries the entity relationship graph to find dependencies,
+    dependents, and circular dependencies.
+
+    Args:
+        query_type: Type of query:
+            - "depends_on": What does node_id depend on?
+            - "used_by": What depends on node_id?
+            - "circular": Find circular dependencies from node_id
+        node_id: Node identifier (e.g., "file:auth.py" or "function:login")
+        max_depth: Maximum traversal depth
+
+    Returns:
+        Dict with 'nodes', 'count', and 'status' keys
+
+    Examples:
+        graph_query("used_by", "file:auth.py")
+        graph_query("depends_on", "class:User", max_depth=2)
+        graph_query("circular", "file:models.py")
+    """
+    try:
+        # Import service (lazy load)
+        from minisweagent.capability.services import GraphService
+        import asyncpg
+
+        # Get database connection
+        db_url = os.getenv("MSWEA_DATABASE_URL")
+        if not db_url:
+            return {
+                "status": "error",
+                "error": "MSWEA_DATABASE_URL not set. Graph queries require database.",
+                "nodes": [],
+                "count": 0,
+            }
+
+        # Connect and query
+        conn = await asyncpg.connect(db_url)
+        try:
+            graph = GraphService(conn)
+
+            if query_type == "depends_on":
+                neighbors = await graph.query_neighbors(
+                    node_id, edge_type="imports", direction="outgoing", max_depth=max_depth
+                )
+                results = [
+                    {
+                        "node_id": n.node_id,
+                        "node_type": n.node_type,
+                        "metadata": n.metadata,
+                    }
+                    for n in neighbors
+                ]
+
+            elif query_type == "used_by":
+                neighbors = await graph.query_neighbors(
+                    node_id, edge_type="imports", direction="incoming", max_depth=max_depth
+                )
+                results = [
+                    {
+                        "node_id": n.node_id,
+                        "node_type": n.node_type,
+                        "metadata": n.metadata,
+                    }
+                    for n in neighbors
+                ]
+
+            elif query_type == "circular":
+                cycles = await graph.find_cycles(node_id, max_depth=max_depth)
+                results = [{"cycle": cycle} for cycle in cycles]
+
+            else:
+                return {
+                    "status": "error",
+                    "error": f"Unknown query type: {query_type}. Use 'depends_on', 'used_by', or 'circular'.",
+                    "nodes": [],
+                    "count": 0,
+                }
+
+            return {
+                "status": "success",
+                "nodes": results,
+                "count": len(results),
+                "query_type": query_type,
+                "node_id": node_id,
+            }
+        finally:
+            await conn.close()
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "nodes": [],
+            "count": 0,
+        }
+
+
 async def run_tests(
     test_cmd: Optional[str] = None,
     test_path: Optional[str] = None,
@@ -551,6 +737,34 @@ def create_tool_catalog() -> CapabilityToolCatalog:
         risk_level=RiskLevel.MEDIUM.value,
     )
 
+    # Register semantic_search (READ_ONLY - safe, requires database)
+    catalog.register(
+        tool_id=ToolId.SEMANTIC_SEARCH.value,
+        func=semantic_search,
+        description="Search codebase using natural language (semantic search)",
+        parameters={
+            "query": "string",
+            "limit": "integer?",
+            "min_score": "number?",
+        },
+        category=ToolCategory.READ.value,
+        risk_level=RiskLevel.READ_ONLY.value,
+    )
+
+    # Register graph_query (READ_ONLY - safe, requires database)
+    catalog.register(
+        tool_id=ToolId.GRAPH_QUERY.value,
+        func=graph_query,
+        description="Query code dependency graph",
+        parameters={
+            "query_type": "string",
+            "node_id": "string",
+            "max_depth": "integer?",
+        },
+        category=ToolCategory.READ.value,
+        risk_level=RiskLevel.READ_ONLY.value,
+    )
+
     _catalog_instance = catalog
     return catalog
 
@@ -597,6 +811,10 @@ __all__ = [
     "write_file",
     "edit_file",
     "find_files",
+    "grep_search",
+    "run_tests",
+    "semantic_search",
+    "graph_query",
     "grep_search",
     "run_tests",
 ]
