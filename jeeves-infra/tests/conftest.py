@@ -15,34 +15,65 @@ from pathlib import Path
 
 import pytest
 
-# Add the project root to the path for imports
-project_root = Path(__file__).parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# Add paths for imports
+# 1. jeeves-infra root (for jeeves_infra package)
+jeeves_infra_root = Path(__file__).parent.parent
+if str(jeeves_infra_root) not in sys.path:
+    sys.path.insert(0, str(jeeves_infra_root))
+
+# 2. tests directory (for tests.fixtures)
+tests_root = Path(__file__).parent
+if str(tests_root) not in sys.path:
+    sys.path.insert(0, str(tests_root))
 
 
 # =============================================================================
 # IMPORT FIXTURES FROM FIXTURES PACKAGE
 # =============================================================================
+# Note: Some fixtures have complex dependencies (mission_system, shared).
+# Import failures are handled gracefully to allow unit tests to run.
 
-from jeeves_infra.tests.fixtures.database import (
-    postgres_container,
-    pg_test_db,
-    create_test_prerequisites,
-    create_session_only,
-)
+try:
+    from fixtures.database import (
+        postgres_container,
+        pg_test_db,
+        create_test_prerequisites,
+        create_session_only,
+    )
+except ImportError:
+    # Database fixtures have external dependencies
+    pass
 
-from jeeves_infra.tests.fixtures.llm import (
-    mock_llm_provider,
-    mock_llm_provider_factory,
-    MockLLMProvider,
-)
+try:
+    from fixtures.llm import (
+        mock_llm_provider,
+        mock_llm_provider_factory,
+        MockLLMProvider,
+    )
+except ImportError:
+    # LLM fixtures have external dependencies
+    pass
 
-from jeeves_infra.tests.fixtures.mocks.core_mocks import (
-    MockEnvelope,
-    mock_envelope_factory,
-    mock_envelope,
-)
+try:
+    from fixtures.mocks.core_mocks import (
+        MockEnvelope,
+        mock_envelope_factory,
+        mock_envelope,
+    )
+except ImportError:
+    # Core mocks may have external dependencies
+    pass
+
+# Kernel mocks are self-contained - no external dependencies
+try:
+    from fixtures.mocks.kernel_mocks import (
+        mock_grpc_channel,
+        mock_kernel_stub,
+        mock_engine_stub,
+        mock_kernel_client,
+    )
+except ImportError:
+    pass
 
 
 # =============================================================================

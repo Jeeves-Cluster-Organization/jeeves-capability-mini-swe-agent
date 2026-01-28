@@ -23,7 +23,7 @@ from typing import List, Optional
 import grpc
 
 from mission_system.adapters import get_logger
-from shared.serialization import datetime_to_ms
+from jeeves_infra.utils.serialization import datetime_to_ms
 from jeeves_infra.protocols import LoggerProtocol, get_capability_resource_registry
 
 try:

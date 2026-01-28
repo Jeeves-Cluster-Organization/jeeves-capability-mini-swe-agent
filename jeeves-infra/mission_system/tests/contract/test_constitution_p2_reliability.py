@@ -37,7 +37,7 @@ class TestP2Reliability:
         Note: Uses knowledge_facts table (tasks table removed in v3.0 pivot)
         """
         from sqlalchemy import text
-        from shared.uuid_utils import uuid_str
+        from jeeves_infra.utils.uuid_utils import uuid_str
 
         fact_id_1 = str(uuid4())
         fact_id_2 = str(uuid4())
@@ -309,7 +309,7 @@ class TestP2ToolReliability:
         Note: Uses knowledge_facts table (tasks table removed in v3.0 pivot)
         """
         from sqlalchemy import text
-        from shared.uuid_utils import uuid_str
+        from jeeves_infra.utils.uuid_utils import uuid_str
 
         fact_id = str(uuid4())
 

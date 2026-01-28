@@ -39,7 +39,7 @@ from jeeves_infra.database.registry import (
 )
 
 # Re-export JSON utilities from centralized location
-from shared.serialization import (
+from jeeves_infra.utils.serialization import (
     JSONEncoderWithUUID,
     to_json,
     from_json,

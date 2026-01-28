@@ -19,7 +19,7 @@ from sqlalchemy import text
 from sqlalchemy.pool import NullPool
 
 from jeeves_infra.logging import get_current_logger
-from shared.serialization import JSONEncoderWithUUID, to_json, from_json
+from jeeves_infra.utils.serialization import JSONEncoderWithUUID, to_json, from_json
 from jeeves_infra.postgres.constants import UUID_COLUMNS, JSONB_COLUMNS, VECTOR_COLUMNS
 from jeeves_infra.protocols import LoggerProtocol
 
@@ -111,7 +111,7 @@ class PostgreSQLClient:
 
         if isinstance(parameters, dict):
             # Import uuid_str for UUID handling at ingestion layer
-            from shared.uuid_utils import uuid_str
+            from jeeves_infra.utils.uuid_utils import uuid_str
 
             # Convert UUID values for known UUID columns (from centralized constants)
             converted = {}
@@ -125,7 +125,7 @@ class PostgreSQLClient:
 
         if isinstance(parameters, (list, tuple)):
             # Import uuid_str for UUID handling at ingestion layer
-            from shared.uuid_utils import uuid_str
+            from jeeves_infra.utils.uuid_utils import uuid_str
 
             # Extract column names from query (UUID_COLUMNS imported from centralized constants)
             column_matches = []
@@ -605,7 +605,7 @@ class PostgreSQLClient:
             raise RuntimeError("Database not connected")
 
         # Import uuid_str for UUID handling at ingestion layer
-        from shared.uuid_utils import uuid_str
+        from jeeves_infra.utils.uuid_utils import uuid_str
 
         # Column constants imported from avionics.database.constants
         # Convert values for special column types
@@ -657,7 +657,7 @@ class PostgreSQLClient:
             raise RuntimeError("Database not connected")
 
         # Import uuid_str for UUID handling at ingestion layer
-        from shared.uuid_utils import uuid_str
+        from jeeves_infra.utils.uuid_utils import uuid_str
 
         # Column constants imported from avionics.database.constants
         # Convert UUID values for known UUID columns
@@ -846,5 +846,5 @@ class PostgreSQLClient:
 
         self._logger.info("vacuum_analyze_completed", table=table_name or "all")
 
-    # Note: Use to_json() and from_json() from shared.serialization
+    # Note: Use to_json() and from_json() from jeeves_infra.utils.serialization
     # for JSON serialization (imported at module level)

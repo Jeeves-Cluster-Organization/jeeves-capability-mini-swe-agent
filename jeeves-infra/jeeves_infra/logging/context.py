@@ -27,8 +27,8 @@ import structlog
 
 from jeeves_infra.protocols import LoggerProtocol
 
-# Import base context functions from shared.logging
-from shared.logging import (
+# Import base context functions from jeeves_infra.utils.logging
+from jeeves_infra.utils.logging import (
     get_request_context,
     set_request_context,
     get_current_logger,
@@ -55,7 +55,7 @@ def bind_logger_context(**kwargs) -> Generator[LoggerProtocol, None, None]:
             get_current_logger().info("validating_input")
     """
     # Import the context var from shared logging
-    from shared.logging import _current_logger
+    from jeeves_infra.utils.logging import _current_logger
 
     current = get_current_logger()
     bound = current.bind(**kwargs)

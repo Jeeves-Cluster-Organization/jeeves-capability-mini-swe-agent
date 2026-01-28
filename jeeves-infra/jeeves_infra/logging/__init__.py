@@ -1,7 +1,7 @@
 """Centralized Logging Infrastructure for Jeeves Runtime.
 
 This module provides logging configuration with optional OTEL tracing support.
-Base logging functionality comes from shared.logging.
+Base logging functionality comes from jeeves_infra.utils.logging.
 Real OpenTelemetry tracing is provided by avionics.observability.
 
 Constitutional Compliance:
@@ -31,7 +31,7 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 from jeeves_infra.protocols import LoggerProtocol
 
 # Import base logging from shared (L0)
-from shared.logging import (
+from jeeves_infra.utils.logging import (
     Logger,
     configure_logging as _base_configure_logging,
     create_logger,

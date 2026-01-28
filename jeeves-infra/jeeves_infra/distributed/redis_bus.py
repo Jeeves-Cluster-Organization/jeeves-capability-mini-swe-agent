@@ -17,7 +17,7 @@ from jeeves_infra.protocols import (
 )
 from jeeves_infra.protocols import LoggerProtocol
 from jeeves_infra.logging import get_current_logger
-from shared.serialization import parse_datetime
+from jeeves_infra.utils.serialization import parse_datetime
 
 
 class RedisDistributedBus:

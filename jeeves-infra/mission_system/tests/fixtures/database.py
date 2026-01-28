@@ -20,7 +20,7 @@ from uuid import uuid4
 
 import pytest
 
-from shared.testing import is_running_in_docker
+from jeeves_infra.utils.testing import is_running_in_docker
 from mission_system.tests.config.fixtures_data import TEST_USER_ID
 from mission_system.tests.config.test_thresholds import TEST_HIGH_CONFIDENCE
 

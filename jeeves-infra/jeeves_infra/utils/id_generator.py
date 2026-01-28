@@ -9,7 +9,7 @@ Constitutional Reference:
 - Kubernetes Pattern: Protocol-first design with swappable implementations
 
 Usage:
-    from shared.id_generator import UUIDGenerator
+    from jeeves_infra.utils.id_generator import UUIDGenerator
 
     generator = UUIDGenerator()
     id = generator.generate()  # "550e8400-e29b-41d4-a716-446655440000"

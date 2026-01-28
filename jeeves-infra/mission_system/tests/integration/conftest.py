@@ -31,7 +31,7 @@ if str(_project_root) not in sys.path:
 import pytest
 from fastapi.testclient import TestClient
 
-from shared.testing import parse_postgres_url
+from jeeves_infra.utils.testing import parse_postgres_url
 from jeeves_infra.gateway.server import app, app_state
 
 # CI detection constants

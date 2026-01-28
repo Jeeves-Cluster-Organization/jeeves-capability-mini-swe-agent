@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from jeeves_infra.gateway.grpc_client import get_grpc_client
 from jeeves_infra.logging import get_current_logger
-from shared.serialization import ms_to_iso
+from jeeves_infra.utils.serialization import ms_to_iso
 
 try:
     from proto import jeeves_pb2

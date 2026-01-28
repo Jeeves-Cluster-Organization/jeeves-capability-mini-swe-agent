@@ -4,7 +4,7 @@ This module provides the core logging utilities that can be used by all layers.
 It implements LoggerProtocol from protocols.
 
 Usage:
-    from shared.logging import create_logger, get_component_logger
+    from jeeves_infra.utils.logging import create_logger, get_component_logger
 
     # Create logger for injection
     logger = create_logger("my_component", envelope_id="...")
