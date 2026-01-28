@@ -20,7 +20,7 @@ from typing import Any, Optional
 
 import structlog
 
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 class StructlogAdapter(LoggerProtocol):

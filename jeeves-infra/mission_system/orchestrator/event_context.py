@@ -33,7 +33,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from jeeves_core import LoggerProtocol, RequestContext
+from jeeves_infra.protocols import LoggerProtocol, RequestContext
 from mission_system.adapters import get_logger
 
 if TYPE_CHECKING:

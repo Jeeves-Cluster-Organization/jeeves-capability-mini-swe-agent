@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 from jeeves_infra.feature_flags import get_feature_flags
 from jeeves_infra.memory.services.tool_health_service import ToolHealthService
-from protocols import get_capability_resource_registry
+from jeeves_infra.protocols import get_capability_resource_registry
 from mission_system.config.constants import PLATFORM_NAME, PLATFORM_VERSION
 
 

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     # CommBus is now in Go (commbus/) - Python uses gRPC or protocol interface
     # Using Protocol for type hints during migration
     from typing import Protocol as CommBusProtocol
-    from jeeves_core import DatabaseClientProtocol, LoggerProtocol
+    from jeeves_infra.protocols import DatabaseClientProtocol, LoggerProtocol
     from jeeves_infra.memory.services.session_state_service import SessionStateService
 
 # Stub type for CommBus during migration (actual implementation is Go)

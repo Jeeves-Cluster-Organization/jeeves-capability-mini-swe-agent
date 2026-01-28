@@ -1,14 +1,6 @@
 """Tests for interrupt handling system."""
 
-import sys
-from pathlib import Path
-
 import pytest
-
-# Add jeeves-core to path for protocol imports
-_jeeves_core_path = Path(__file__).parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
 
 
 class TestConfirmationHandler:
@@ -66,7 +58,7 @@ class TestModeManager:
         """Test mode switching via commands."""
         from minisweagent.capability.interrupts import ModeManager, ExecutionMode
         from minisweagent.capability.interrupts.mode_manager import ResponseAction
-        from protocols.interrupts import InterruptResponse
+        from jeeves_infra.protocols import InterruptResponse
 
         manager = ModeManager(initial_mode=ExecutionMode.CONFIRM)
 
@@ -89,7 +81,7 @@ class TestModeManager:
         """Test that empty response approves action."""
         from minisweagent.capability.interrupts import ModeManager
         from minisweagent.capability.interrupts.mode_manager import ResponseAction
-        from protocols.interrupts import InterruptResponse
+        from jeeves_infra.protocols import InterruptResponse
 
         manager = ModeManager()
         action, _ = manager.handle_response(InterruptResponse(text=""))
@@ -99,7 +91,7 @@ class TestModeManager:
         """Test that text response rejects action."""
         from minisweagent.capability.interrupts import ModeManager
         from minisweagent.capability.interrupts.mode_manager import ResponseAction
-        from protocols.interrupts import InterruptResponse
+        from jeeves_infra.protocols import InterruptResponse
 
         manager = ModeManager()
         action, message = manager.handle_response(InterruptResponse(text="no thanks"))
@@ -110,7 +102,7 @@ class TestModeManager:
         """Test that /h shows help."""
         from minisweagent.capability.interrupts import ModeManager
         from minisweagent.capability.interrupts.mode_manager import ResponseAction
-        from protocols.interrupts import InterruptResponse
+        from jeeves_infra.protocols import InterruptResponse
 
         manager = ModeManager()
         action, message = manager.handle_response(InterruptResponse(text="/h"))
@@ -125,7 +117,7 @@ class TestCLIInterruptService:
     async def test_create_interrupt(self):
         """Test creating an interrupt."""
         from minisweagent.capability.interrupts import CLIInterruptService
-        from protocols.interrupts import InterruptKind, InterruptStatus
+        from jeeves_infra.protocols import InterruptKind, InterruptStatus
 
         service = CLIInterruptService()
         interrupt = await service.create_interrupt(
@@ -144,7 +136,7 @@ class TestCLIInterruptService:
     async def test_respond_to_interrupt(self):
         """Test responding to an interrupt."""
         from minisweagent.capability.interrupts import CLIInterruptService
-        from protocols.interrupts import InterruptKind, InterruptResponse, InterruptStatus
+        from jeeves_infra.protocols import InterruptKind, InterruptResponse, InterruptStatus
 
         service = CLIInterruptService()
         interrupt = await service.create_interrupt(
@@ -164,7 +156,7 @@ class TestCLIInterruptService:
     async def test_list_pending_interrupts(self):
         """Test listing pending interrupts."""
         from minisweagent.capability.interrupts import CLIInterruptService
-        from protocols.interrupts import InterruptKind
+        from jeeves_infra.protocols import InterruptKind
 
         service = CLIInterruptService()
 

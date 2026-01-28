@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from protocols import GraphStorageProtocol, LoggerProtocol
+from jeeves_infra.protocols import GraphStorageProtocol, LoggerProtocol
 from shared import get_component_logger
 
 

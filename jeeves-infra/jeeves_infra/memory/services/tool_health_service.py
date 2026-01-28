@@ -17,13 +17,13 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 
-from protocols import HealthStatus, DatabaseClientProtocol
+from jeeves_infra.protocols import HealthStatus, DatabaseClientProtocol
 from jeeves_infra.memory.repositories.tool_metrics_repository import (
     ToolMetricsRepository,
     ToolMetric
 )
 from shared import get_component_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 @dataclass

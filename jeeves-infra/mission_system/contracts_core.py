@@ -14,7 +14,7 @@ All types come from protocols (Python bridge to Go core).
 # =============================================================================
 # CANONICAL PROTOCOLS (from protocols)
 # =============================================================================
-from protocols import (
+from jeeves_infra.protocols import (
     # App context protocols
     SettingsProtocol,
     FeatureFlagsProtocol,
@@ -34,7 +34,7 @@ from protocols import (
 # =============================================================================
 # CENTRALIZED AGENT ARCHITECTURE
 # =============================================================================
-from protocols import (
+from jeeves_infra.protocols import (
     # Agent configuration
     AgentConfig,
     PipelineConfig,
@@ -53,13 +53,13 @@ from protocols import (
 )
 
 # Unified runtime
-from protocols import (
+from jeeves_infra.protocols import (
     PipelineRunner,
     create_pipeline_runner,
 )
 
 # Core protocols from core_engine
-from protocols import (
+from jeeves_infra.protocols import (
     ToolProtocol,
     EventBusProtocol,
     MemoryServiceProtocol,
@@ -69,13 +69,13 @@ from protocols import (
 )
 
 # Working memory base class
-from protocols import WorkingMemory, Finding
+from jeeves_infra.protocols import WorkingMemory, Finding
 
 # Configuration types (ContextBounds only - access bounds via AppContext.get_context_bounds())
-from protocols import ContextBounds
+from jeeves_infra.protocols import ContextBounds
 
 # JSON utilities
-from protocols import (
+from jeeves_infra.protocols import (
     JSONRepairKit,
     normalize_string_list,
 )
@@ -108,7 +108,7 @@ from mission_system.config.agent_profiles import (
 # NOT re-exported here. Capability layers should import from their own tools/catalog.py.
 # See: jeeves-capability-code-analyser/tools/catalog.py for code_analysis capability.
 # ToolCategory and RiskLevel come from jeeves_core.types (Go kernel).
-from jeeves_core.types import ToolCategory
+from jeeves_infra.protocols import ToolCategory
 
 # NOTE: AgentContext removed in v4.0 - context flows through Envelope
 

@@ -15,20 +15,20 @@ Architectural Pattern:
 from typing import Optional, List
 from datetime import datetime, timezone
 
-from protocols import (
+from jeeves_infra.protocols import (
     WorkingMemory,
     FocusState,
     FocusType,
     EntityRef,
     ClarificationContext,
 )
-from protocols import SessionStateProtocol
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import SessionStateProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 from jeeves_infra.memory.services.session_state_service import SessionStateService
 from jeeves_infra.memory.repositories.session_state_repository import SessionState
 from shared import get_component_logger, parse_datetime
-from protocols import DatabaseClientProtocol
+from jeeves_infra.protocols import DatabaseClientProtocol
 
 
 class SessionStateAdapter:

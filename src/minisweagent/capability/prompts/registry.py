@@ -11,19 +11,15 @@ v2.0 Features:
 """
 
 import platform
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
 from jinja2 import Template, StrictUndefined
 
-# Add jeeves-core to path
-_jeeves_core_path = Path(__file__).parent.parent.parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
+# jeeves-core is now a proper package - no sys.path manipulation needed
 
-from protocols.agents import PromptRegistry
+from jeeves_infra.runtime import PromptRegistry
 
 
 # Default config path

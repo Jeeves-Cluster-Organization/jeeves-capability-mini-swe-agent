@@ -73,8 +73,9 @@ dev = [
     "mkdocs-redirects",
     "portkey-ai",
     "swe-rex",
-    # jeeves-core dependencies
-    "structlog",
+    # jeeves packages as proper packages
+    "jeeves-core @ file:jeeves-core",
+    "jeeves-infra @ file:jeeves-infra",
 ]
 
 [project.urls]

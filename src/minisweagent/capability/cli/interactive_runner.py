@@ -5,19 +5,14 @@ interrupt handling, replacing the original InteractiveAgent behavior.
 """
 
 import asyncio
-import sys
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from rich.console import Console
 from rich.rule import Rule
 
-# Add jeeves-core to path
-_jeeves_core_path = Path(__file__).parent.parent.parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
+# jeeves-core is now a proper package - no sys.path manipulation needed
 
-from protocols.interrupts import InterruptKind, InterruptResponse
+from jeeves_infra.protocols import InterruptKind, InterruptResponse
 
 from minisweagent.capability.orchestrator import SWEOrchestrator
 from minisweagent.capability.interrupts import (

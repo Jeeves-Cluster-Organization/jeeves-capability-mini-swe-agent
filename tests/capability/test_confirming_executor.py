@@ -10,7 +10,7 @@ _jeeves_core_path = Path(__file__).parent.parent.parent / "jeeves-core"
 if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
     sys.path.insert(0, str(_jeeves_core_path))
 
-from protocols.interrupts import InterruptResponse, InterruptStatus
+from jeeves_infra.protocols import InterruptResponse, InterruptStatus
 
 from minisweagent.capability.tools.confirming_executor import (
     ConfirmingToolExecutor,

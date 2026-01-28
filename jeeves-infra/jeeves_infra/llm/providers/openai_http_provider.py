@@ -16,7 +16,7 @@ import httpx
 
 from .base import LLMProvider, TokenChunk
 from jeeves_infra.logging import get_current_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 class OpenAIHTTPProvider(LLMProvider):

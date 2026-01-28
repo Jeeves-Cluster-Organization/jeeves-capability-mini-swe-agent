@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Protocol, AsyncIterator, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from jeeves_core.types import Envelope, AgentConfig, PipelineConfig
+    from jeeves_infra.protocols import Envelope, AgentConfig, PipelineConfig
 
 
 # =============================================================================
@@ -345,8 +345,8 @@ class Agent:
         Yields:
             Tuple[str, Any]: (event_type, event_data) pairs
         """
-        from jeeves_core.types import PipelineEvent
-        from jeeves_core.types import TokenStreamMode
+        from jeeves_infra.protocols import PipelineEvent
+        from jeeves_infra.protocols import TokenStreamMode
 
         self.logger.info(f"{self.name}_stream_started", envelope_id=envelope.envelope_id)
 
@@ -390,7 +390,7 @@ class Agent:
 
     async def _call_llm_stream(self, envelope: Envelope) -> AsyncIterator[str]:
         """Stream authoritative tokens (for TEXT mode with AUTHORITATIVE tokens)."""
-        from jeeves_core.types import AgentOutputMode
+        from jeeves_infra.protocols import AgentOutputMode
 
         if self.config.output_mode != AgentOutputMode.TEXT:
             raise ValueError("_call_llm_stream() requires output_mode=TEXT")
@@ -684,7 +684,7 @@ class PipelineRunner:
         Resume stages are determined by PipelineConfig, not hardcoded.
         This allows different capabilities to define their own resume behavior.
         """
-        from jeeves_core.types import InterruptKind
+        from jeeves_infra.protocols import InterruptKind
 
         # Handle unified interrupt mechanism
         if envelope.interrupt and envelope.interrupt.kind == InterruptKind.CLARIFICATION:
@@ -762,10 +762,10 @@ def create_envelope(
     """Factory to create Envelope."""
     import uuid
     from jeeves_infra.utils import utc_now
-    from jeeves_core.types import Envelope  # Runtime import to avoid circular dependency
+    from jeeves_infra.protocols import Envelope  # Runtime import to avoid circular dependency
 
     # Import RequestContext at runtime to avoid circular dependency
-    from jeeves_core import RequestContext as RC
+    from jeeves_infra.protocols import RequestContext as RC
     if not isinstance(request_context, RC):
         raise TypeError("request_context must be a RequestContext instance")
 

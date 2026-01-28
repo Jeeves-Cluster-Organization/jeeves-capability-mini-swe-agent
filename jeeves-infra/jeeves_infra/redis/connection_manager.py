@@ -9,7 +9,7 @@ from typing import Optional, Tuple, List, Any
 from jeeves_infra.settings import Settings
 from jeeves_infra.feature_flags import get_feature_flags
 from jeeves_infra.logging import get_current_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 class StateBackend:

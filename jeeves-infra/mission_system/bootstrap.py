@@ -31,8 +31,8 @@ from jeeves_infra.context import AppContext, SystemClock
 from jeeves_infra.logging import configure_logging
 from jeeves_infra.settings import Settings, get_settings
 from jeeves_infra.feature_flags import FeatureFlags, get_feature_flags
-from jeeves_core.types import ExecutionConfig, ContextBounds, OrchestrationFlags
-from protocols import get_capability_resource_registry
+from jeeves_infra.protocols import ExecutionConfig, ContextBounds, OrchestrationFlags
+from jeeves_infra.protocols import get_capability_resource_registry
 
 # KernelClient for Go kernel integration
 from jeeves_infra.kernel_client import KernelClient, QuotaCheckResult
@@ -41,7 +41,7 @@ from jeeves_infra.kernel_client import KernelClient, QuotaCheckResult
 LLMGatewayType = Any
 
 if TYPE_CHECKING:
-    from protocols import (
+    from jeeves_infra.protocols import (
         LanguageConfigProtocol,
         InferenceEndpointsProtocol,
         AgentToolAccessProtocol,

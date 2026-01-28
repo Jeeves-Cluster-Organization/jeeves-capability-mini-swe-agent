@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
-from protocols import (
+from jeeves_infra.protocols import (
     DistributedBusProtocol,
     DistributedTask,
     QueueStats,

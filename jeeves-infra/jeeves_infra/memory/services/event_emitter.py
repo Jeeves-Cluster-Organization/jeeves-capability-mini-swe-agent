@@ -22,7 +22,7 @@ import json
 
 from jeeves_infra.memory.repositories.event_repository import EventRepository, DomainEvent
 from shared import get_component_logger
-from protocols import LoggerProtocol, FeatureFlagsProtocol
+from jeeves_infra.protocols import LoggerProtocol, FeatureFlagsProtocol
 
 if TYPE_CHECKING:
     # CommBus is now in Go (commbus/) - use Protocol for type hints

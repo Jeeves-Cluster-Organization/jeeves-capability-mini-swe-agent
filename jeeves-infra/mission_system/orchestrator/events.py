@@ -58,10 +58,10 @@ from mission_system.orchestrator.event_context import (
     EventContext,
     create_event_context,
 )
-from jeeves_core import RequestContext
+from jeeves_infra.protocols import RequestContext
 
 if TYPE_CHECKING:
-    from jeeves_core import LoggerProtocol
+    from jeeves_infra.protocols import LoggerProtocol
     from jeeves_infra.memory.repositories.event_repository import EventRepository
 
 

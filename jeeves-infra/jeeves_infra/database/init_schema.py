@@ -19,7 +19,7 @@ from typing import Optional
 import os
 
 from jeeves_infra.logging import get_current_logger
-from jeeves_core import LoggerProtocol, DatabaseClientProtocol
+from jeeves_infra.protocols import LoggerProtocol, DatabaseClientProtocol
 
 
 async def init_schema(

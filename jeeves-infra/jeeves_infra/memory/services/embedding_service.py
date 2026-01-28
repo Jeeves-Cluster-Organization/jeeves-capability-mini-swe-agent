@@ -19,7 +19,7 @@ import numpy as np
 from functools import lru_cache
 
 from shared import get_component_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer

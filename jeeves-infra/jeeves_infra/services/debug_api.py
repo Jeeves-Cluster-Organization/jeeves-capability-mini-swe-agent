@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from protocols import (
+from jeeves_infra.protocols import (
     CheckpointProtocol,
     CheckpointRecord,
     Envelope,

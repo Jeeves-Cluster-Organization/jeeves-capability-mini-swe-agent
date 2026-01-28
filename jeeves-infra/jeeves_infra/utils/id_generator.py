@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Iterator, Optional
 from uuid import UUID, uuid4, uuid5
 
-from jeeves_core import IdGeneratorProtocol
+from jeeves_infra.protocols import IdGeneratorProtocol
 
 
 # Fixed namespace for deterministic ID generation

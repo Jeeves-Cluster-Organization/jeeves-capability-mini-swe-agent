@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from control_tower.resources.tracker import ResourceTracker
 from control_tower.types import ResourceQuota, ResourceUsage
-from jeeves_core.types import Envelope
+from jeeves_infra.protocols import Envelope
 
 
 pytestmark = [

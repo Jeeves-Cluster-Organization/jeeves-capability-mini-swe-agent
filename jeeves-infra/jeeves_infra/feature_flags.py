@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Literal, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from jeeves_core import LoggerProtocol
+    from jeeves_infra.protocols import LoggerProtocol
 
 
 # ============================================================

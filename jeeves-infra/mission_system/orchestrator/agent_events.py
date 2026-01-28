@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Optional, AsyncIterator
 
-from jeeves_core import RequestContext
+from jeeves_infra.protocols import RequestContext
 
 
 class AgentEventType(Enum):

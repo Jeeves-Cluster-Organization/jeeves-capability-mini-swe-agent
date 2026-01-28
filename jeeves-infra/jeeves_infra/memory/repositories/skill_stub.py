@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from protocols import SkillStorageProtocol, LoggerProtocol
+from jeeves_infra.protocols import SkillStorageProtocol, LoggerProtocol
 from shared import get_component_logger
 
 

@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
 from jeeves_infra.logging import get_current_logger
-from protocols import InterruptResponse, InterruptKind, InterruptServiceProtocol
+from jeeves_infra.protocols import InterruptResponse, InterruptKind, InterruptServiceProtocol
 
 router = APIRouter(prefix="/interrupts", tags=["interrupts"])
 

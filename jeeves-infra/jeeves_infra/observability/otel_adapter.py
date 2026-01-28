@@ -31,7 +31,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Iterator, List, Optional
 import threading
 
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 # OpenTelemetry imports with graceful fallback
 try:

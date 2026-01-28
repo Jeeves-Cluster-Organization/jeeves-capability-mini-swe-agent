@@ -9,11 +9,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from protocols import (
+from jeeves_infra.protocols import (
     CheckpointProtocol,
     CheckpointRecord,
 )
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 from jeeves_infra.logging import get_current_logger
 
 

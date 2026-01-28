@@ -150,9 +150,9 @@ async def test_root_endpoint(test_app):
 @pytest.mark.asyncio
 async def test_submit_request_success(test_app):
     """Test successful request submission."""
-    from jeeves_core import RequestContext
-    from jeeves_core.types import Envelope
-    from jeeves_core.types import TerminalReason
+    from jeeves_infra.protocols import RequestContext
+    from jeeves_infra.protocols import Envelope
+    from jeeves_infra.protocols import TerminalReason
 
     # Create mock envelope result (uses input envelope's request_id for consistency)
     def create_mock_envelope(envelope, **kwargs):
@@ -194,9 +194,9 @@ async def test_submit_request_success(test_app):
 @pytest.mark.asyncio
 async def test_submit_request_clarification(test_app):
     """Test request submission requiring clarification."""
-    from jeeves_core import RequestContext
-    from jeeves_core.types import Envelope
-    from jeeves_core.types import FlowInterrupt, InterruptKind
+    from jeeves_infra.protocols import RequestContext
+    from jeeves_infra.protocols import Envelope
+    from jeeves_infra.protocols import FlowInterrupt, InterruptKind
 
     # Create mock envelope with clarification interrupt
     def create_mock_envelope(envelope, **kwargs):

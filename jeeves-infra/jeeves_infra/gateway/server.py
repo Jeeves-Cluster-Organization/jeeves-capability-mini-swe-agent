@@ -37,7 +37,7 @@ from jeeves_infra.logging import get_current_logger
 from mission_system.services.chat_service import ChatService
 from jeeves_infra.observability.tracing import init_tracing, instrument_fastapi, shutdown_tracing
 
-from protocols import (
+from jeeves_infra.protocols import (
     Envelope,
     RequestContext,
     create_envelope,
@@ -586,7 +586,7 @@ def _determine_response_status(result_envelope: Envelope) -> tuple[str, Optional
     Returns:
         Tuple of (status, response_text, clarification_needed)
     """
-    from protocols import InterruptKind
+    from jeeves_infra.protocols import InterruptKind
 
     clarification_needed = (
         result_envelope.interrupt_pending
@@ -788,7 +788,7 @@ async def submit_clarification(body: ClarificationBody) -> SubmitRequestResponse
 
         # Check for further clarification (EventBridge handles WebSocket broadcast)
         # Use unified interrupt mechanism
-        from protocols import InterruptKind
+        from jeeves_infra.protocols import InterruptKind
         clarification_needed = (
             result_envelope.interrupt_pending
             and result_envelope.interrupt

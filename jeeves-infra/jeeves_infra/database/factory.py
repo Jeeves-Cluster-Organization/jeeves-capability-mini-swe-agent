@@ -17,7 +17,7 @@ This ensures clean separation and no event loop issues.
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 from jeeves_infra.logging import get_current_logger
-from jeeves_core import LoggerProtocol, DatabaseClientProtocol
+from jeeves_infra.protocols import LoggerProtocol, DatabaseClientProtocol
 from jeeves_infra.database.registry import create_database_client as _create_client
 
 # Core infrastructure schema path - resolved relative to this module
@@ -76,7 +76,7 @@ async def _maybe_init_schema(client: DatabaseClientProtocol, logger: LoggerProto
         return
 
     # Import registry to get capability schemas
-    from protocols import get_capability_resource_registry
+    from jeeves_infra.protocols import get_capability_resource_registry
 
     try:
         result = await client.fetch_one(

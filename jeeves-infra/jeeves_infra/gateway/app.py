@@ -39,7 +39,7 @@ from jeeves_infra.gateway.websocket import (
     setup_websocket_subscriptions,
 )
 from jeeves_infra.logging import get_current_logger
-from protocols import get_capability_resource_registry
+from jeeves_infra.protocols import get_capability_resource_registry
 from jeeves_infra.observability.tracing import init_tracing, instrument_fastapi, instrument_grpc_client, shutdown_tracing
 
 

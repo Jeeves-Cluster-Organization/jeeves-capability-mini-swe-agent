@@ -25,7 +25,7 @@ from uuid import uuid4
 
 from jeeves_infra.database.client import DatabaseClientProtocol
 from jeeves_infra.logging import get_current_logger
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 @dataclass

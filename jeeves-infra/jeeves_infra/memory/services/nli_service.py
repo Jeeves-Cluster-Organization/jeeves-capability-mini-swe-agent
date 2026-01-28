@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
 from shared import get_component_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 @dataclass

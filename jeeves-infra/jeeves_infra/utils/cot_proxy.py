@@ -15,7 +15,7 @@ import re
 from typing import Tuple, Optional, List
 
 from jeeves_infra.logging import get_current_logger
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 # Known CoT marker patterns

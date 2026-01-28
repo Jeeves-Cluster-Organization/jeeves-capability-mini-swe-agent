@@ -19,7 +19,7 @@ from uuid import uuid4
 import json
 
 from shared import get_component_logger, parse_datetime
-from protocols import LoggerProtocol, DatabaseClientProtocol
+from jeeves_infra.protocols import LoggerProtocol, DatabaseClientProtocol
 
 
 class SessionState:

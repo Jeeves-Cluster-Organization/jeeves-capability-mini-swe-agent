@@ -5,18 +5,13 @@ for CLI use, replacing the original InteractiveAgent blocking prompts.
 """
 
 import asyncio
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 import uuid
 
-# Add jeeves-core to path
-_jeeves_core_path = Path(__file__).parent.parent.parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
+# jeeves-core is now a proper package - no sys.path manipulation needed
 
-from protocols.interrupts import (
+from jeeves_infra.protocols import (
     FlowInterrupt,
     InterruptKind,
     InterruptResponse,

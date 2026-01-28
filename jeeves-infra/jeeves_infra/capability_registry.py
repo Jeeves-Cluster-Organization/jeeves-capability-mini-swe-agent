@@ -12,7 +12,7 @@ Constitutional Reference:
 Usage:
     # At capability startup (in jeeves-capability-my-capability)
     from avionics.capability_registry import get_capability_registry
-    from protocols import AgentLLMConfig
+    from jeeves_infra.protocols import AgentLLMConfig
 
     registry = get_capability_registry()
     registry.register("my_capability", "my_agent", AgentLLMConfig(
@@ -30,7 +30,7 @@ Usage:
 import os
 from typing import Dict, List, Optional, TYPE_CHECKING
 
-from protocols import (
+from jeeves_infra.protocols import (
     AgentLLMConfig,
     DomainLLMRegistryProtocol,
     LoggerProtocol,

@@ -19,15 +19,11 @@ import subprocess
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Optional
-import sys
 
-# Add jeeves-core to path
-_jeeves_core_path = Path(__file__).parent.parent.parent.parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
+# jeeves-core is now a proper package - no sys.path manipulation needed
 
 from protocols.capability import CapabilityToolCatalog
-from protocols.enums import RiskLevel, ToolCategory
+from jeeves_infra.protocols import RiskLevel, ToolCategory
 
 # =============================================================================
 # TOOL ID ENUM (CAPABILITY-OWNED per Contract 10)

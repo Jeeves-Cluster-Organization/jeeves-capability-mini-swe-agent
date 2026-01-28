@@ -40,7 +40,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set
 import threading
 
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 # Optional aiohttp for HTTP delivery
 try:

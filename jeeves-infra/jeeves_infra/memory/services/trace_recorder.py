@@ -16,7 +16,7 @@ import asyncio
 
 from jeeves_infra.memory.repositories.trace_repository import TraceRepository, AgentTrace
 from shared import get_component_logger
-from protocols import LoggerProtocol, FeatureFlagsProtocol
+from jeeves_infra.protocols import LoggerProtocol, FeatureFlagsProtocol
 
 
 class TraceRecorder:

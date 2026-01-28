@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from jeeves_infra.memory.services.xref_manager import CrossRefManager
 import asyncio
 from shared import get_component_logger
-from jeeves_core import LoggerProtocol, VectorStorageProtocol
+from jeeves_infra.protocols import LoggerProtocol, VectorStorageProtocol
 
 
 class MemoryManager:

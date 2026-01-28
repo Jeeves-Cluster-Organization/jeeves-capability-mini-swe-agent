@@ -26,7 +26,7 @@ from typing import AsyncIterator, Dict, Any, Optional
 from .base import LLMProvider, TokenChunk
 from ..cost_calculator import get_cost_calculator
 from jeeves_infra.logging import get_current_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 try:
     from litellm import acompletion

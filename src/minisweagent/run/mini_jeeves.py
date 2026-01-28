@@ -39,10 +39,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-# Add jeeves-core to path
-_jeeves_core_path = Path(__file__).parent.parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
+# jeeves-core is now a proper package - install with: pip install -e ./jeeves-core
+# No sys.path manipulation needed
 
 from minisweagent import global_config_dir
 from minisweagent.capability import register_capability
@@ -83,8 +81,8 @@ def _create_llm_factory(provider: str, base_url: str, model: Optional[str] = Non
     """Create LLM provider factory."""
     def factory(agent_role: str):
         try:
-            from avionics.llm.factory import create_llm_provider
-            from avionics.settings import Settings
+            from jeeves_infra.llm.factory import create_llm_provider
+            from jeeves_infra.settings import Settings
 
             settings = Settings(
                 llm_provider=provider,
@@ -94,7 +92,7 @@ def _create_llm_factory(provider: str, base_url: str, model: Optional[str] = Non
             return create_llm_provider(settings, agent_name=agent_role)
         except ImportError:
             if provider == "openai_http":
-                from avionics.llm.providers.openai_http_provider import OpenAIHTTPProvider
+                from jeeves_infra.llm.providers.openai_http_provider import OpenAIHTTPProvider
                 return OpenAIHTTPProvider(
                     api_base=base_url,
                     model=model or "default",

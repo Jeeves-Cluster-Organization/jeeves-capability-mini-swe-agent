@@ -31,7 +31,7 @@ Constitutional Alignment:
 import os
 from typing import Any, Callable, Dict, List, Optional
 
-from protocols import (
+from jeeves_infra.protocols import (
     get_capability_resource_registry,
     DomainServiceConfig,
     CapabilityOrchestratorConfig,

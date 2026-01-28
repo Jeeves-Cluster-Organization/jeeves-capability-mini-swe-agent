@@ -1,6 +1,6 @@
 # Jeeves Architecture Tracker
 
-> **Source of Truth** for jeeves-core architecture. Last updated: 2026-01-29 (Session 18)
+> **Source of Truth** for jeeves-core architecture. Last updated: 2026-01-29 (Session 19)
 
 ---
 
@@ -81,39 +81,46 @@ coreengine/kernel/
 5. **jeeves_core/__init__.py** now only exports types, events, protocols
 6. **Created `jeeves_infra/kernel_client.py`** - Python gRPC client for Go kernel
 
-### Package Layout After Session 16
+### Package Layout After Session 19
 
 ```
-jeeves-core/                    # PURE GO - no Python application code
+jeeves-core/                    # PURE GO - no Python at all
 ├── coreengine/
 │   ├── kernel/                 # Go kernel (process scheduler, resources)
 │   ├── runtime/                # Go pipeline runner
 │   ├── agents/                 # Go agents
 │   ├── envelope/               # Go envelope
 │   ├── grpc/                   # gRPC servers (KernelServer, EngineServer)
-│   └── proto/                  # Proto definitions (engine.proto)
+│   ├── proto/                  # Proto definitions (engine.proto)
+│   ├── observability/          # Metrics & tracing
+│   ├── tools/                  # Tool executor
+│   ├── typeutil/               # Safe type utilities
+│   ├── config/                 # Pipeline configuration
+│   └── testutil/               # Test helpers
 ├── commbus/                    # Go communication bus
-├── jeeves_core/                # Python bindings (thin - types only)
-│   ├── __init__.py             # Re-exports types, events, protocols
-│   ├── types/                  # Python dataclasses mirroring Go
-│   └── protocols.py            # Protocol definitions
-└── protocols/                  # Python protocols
+├── docs/                       # Architecture documentation
+├── docker/                     # Docker configs
+└── systemd/                    # Systemd service files
 
 jeeves-infra/                   # Python infrastructure + application layer
 ├── jeeves_infra/
 │   ├── kernel_client.py        # Python gRPC client for Go kernel
-│   ├── protocols/              # Generated gRPC stubs
-│   │   ├── engine_pb2.py
-│   │   └── engine_pb2_grpc.py  # KernelServiceStub, EngineServiceStub
+│   ├── protocols/              # All Python protocols (consolidated)
+│   │   ├── __init__.py         # Exports all types, protocols
+│   │   ├── engine_pb2.py       # Generated protobuf
+│   │   ├── engine_pb2_grpc.py  # KernelServiceStub, EngineServiceStub
+│   │   ├── interfaces.py       # Protocol interfaces
+│   │   ├── types.py            # Dataclass types
+│   │   └── capability.py       # Capability registration (moved from jeeves-core)
 │   ├── runtime/                # Python agent execution (LLM, tools)
 │   ├── utils/                  # Utilities
-│   ├── context.py              # AppContext (was avionics.context)
-│   ├── logging.py              # Logging (was avionics.logging)
-│   ├── settings.py             # Settings (was avionics.settings)
+│   ├── context.py              # AppContext
+│   ├── logging/                # Logging adapters
+│   ├── settings.py             # Settings
 │   ├── gateway/
 │   ├── llm/
 │   └── ...
-├── mission_system/             # Application layer (moved from jeeves-core)
+├── mission_system/             # Application layer
 │   ├── bootstrap.py            # Composition root
 │   ├── orchestrator/           # LangGraph pipelines
 │   ├── services/               # ChatService, WorkerCoordinator
@@ -153,6 +160,34 @@ jeeves-infra/                   # Python infrastructure + application layer
 | `jeeves_core/utils/` | **MOVED** to jeeves_infra (Session 14) |
 | `mission_system/` | **MOVED** to jeeves_infra (Session 16) |
 | `avionics/` | **INTEGRATED** into jeeves_infra |
+| `jeeves_core/` (Python) | **DELETED** (Session 19) - protocols moved to jeeves_infra |
+| `protocols/` (Python) | **DELETED** (Session 19) - moved to jeeves_infra/protocols |
+
+---
+
+### Session 19 Completed
+
+1. **Cleaned jeeves-core - Now 100% Pure Go**
+   - Deleted `jeeves_core/` Python package (types, events, protocols)
+   - Deleted `protocols/` Python package (capability registry, gRPC client)
+   - Deleted `scripts/` directory (Python scripts)
+   - Deleted `tests/` Python tests
+   - Deleted Python config files (conftest.py, pyproject.toml, pytest.ini)
+   - Removed duplicate `github.com/` proto artifact
+   - Removed coverage artifacts (cover, coverage.json, etc.)
+   - Removed empty `cmd/` directory
+
+2. **Consolidated Python Protocols in jeeves-infra**
+   - Moved `capability.py` to `jeeves-infra/jeeves_infra/protocols/`
+   - Updated `jeeves_infra/protocols/__init__.py` to export capability registration
+   - Migrated all `from jeeves_core import` → `from jeeves_infra.protocols import`
+   - Migrated all `from protocols import` → `from jeeves_infra.protocols import`
+
+3. **Go Test Coverage Status**
+   - kernel: 54.5% (target: >80%)
+   - grpc: 46.6%
+   - commbus: 77.9%
+   - Other packages: 85-100%
 
 ---
 
@@ -176,32 +211,31 @@ jeeves-infra/                   # Python infrastructure + application layer
 
 ## Next Steps
 
-### Session 19: Harden jeeves-core Go + Increase Test Coverage
+### Session 20: Increase Go Test Coverage to >80%
 
-Focus: **jeeves-core Go code only** - increase test coverage, harden the kernel.
+Focus: **jeeves-core Go test coverage** - currently at 54.5% for kernel, need >80%.
 
-1. **Increase test coverage for coreengine/kernel/**
-   - Current: ~500 LOC tests, target: comprehensive edge cases
-   - Test rate limiter edge cases (window boundaries, burst handling)
-   - Test lifecycle state machine (invalid transitions, concurrent access)
-   - Test resource tracker quota enforcement edge cases
+1. **Kernel Test Coverage (Priority)**
+   - Current: 54.5%, Target: >80%
+   - Uncovered functions identified:
+     - `rate_limiter.go`: OK, IsEmpty, SetDefaultConfig, SetEndpointLimits, GetUsage, ResetUser, CleanupExpired
+     - `lifecycle.go`: IsValidTransition, TransitionState, Cleanup
+     - `resources.go`: RecordToolCall, RecordAgentHop, UpdateElapsedTime, AdjustQuota, GetAllUsage
+     - `kernel.go`: Lifecycle, RateLimiter, Interrupts, GetNextRunnable, TransitionState, Terminate, CheckQuota
+     - `services.go`: UnregisterService, GetService, HasService, HasHandler, GetServiceStats
+     - `types.go`: ProcessState methods, PCB methods, NewProcessControlBlock
 
-2. **Add integration tests for gRPC servers**
-   - `coreengine/grpc/kernel_server_test.go`
-   - `coreengine/grpc/engine_server_test.go`
-   - Test CreateProcess → RecordUsage → CheckQuota flow
+2. **gRPC Test Coverage**
+   - Current: 46.6%, Target: >70%
+   - Add kernel_server integration tests
 
-3. **Add CommBus tests**
-   - `commbus/bus_test.go` - expand coverage
-   - Test pub/sub patterns, error handling
-
-4. **Benchmark tests**
+3. **Benchmarks**
    - Process scheduling throughput
-   - Rate limiter performance under load
+   - Rate limiter under concurrent load
 
-### After Session 19
+### After Session 20
 
-- jeeves-core Go code hardened with high test coverage
+- jeeves-core Go code hardened with >80% test coverage
 - Ready for production deployment
 - Python integration via KernelClient validated
 
@@ -234,39 +268,51 @@ Note: Repo is `github.com/Jeeves-Cluster-Organization/jeeves-core` but go.mod us
 
 ---
 
-## Session 18 Prompt
+## Session 20 Prompt
 
 ```
-Session 18: Complete Import Migration + Wire KernelClient
+Session 20: Increase Go Test Coverage to >80%
 
-Session 17 Completed:
-- Refactored LLMGateway to use KernelClient directly (no callbacks)
-- Updated AppContext: added kernel_client, deprecated control_tower
-- Updated bootstrap.py: removed ControlTower shim
-- LLMGateway now has set_pid(), set_kernel_client(), QuotaExceededError
+Session 19 Completed:
+- Cleaned jeeves-core to be 100% Pure Go (deleted all Python)
+- Moved capability.py to jeeves-infra/jeeves_infra/protocols/
+- Migrated all `from jeeves_core` and `from protocols` imports to jeeves_infra.protocols
+- Removed duplicate proto directory and coverage artifacts
 
-Remaining for Session 18:
+Current Go Test Coverage:
+- kernel: 54.5% (TARGET: >80%)
+- grpc: 46.6%
+- commbus: 77.9%
+- agents: 87.1%
+- config: 95.6%
+- envelope: 85.0%
+- runtime: 91.8%
 
-1. Fix `from avionics.*` imports in jeeves_infra (~70 files)
-   - grep -r "from avionics" jeeves-infra/jeeves_infra/
-   - Main files: logging/, database/, llm/, gateway/, settings.py, wiring.py
-   - Change to jeeves_infra.* or create missing modules
+Tasks:
 
-2. Fix `from control_tower.*` imports
-   - grep -r "from control_tower" jeeves-infra/
-   - Remove control_tower.types, control_tower.kernel imports
-   - Use KernelClient or jeeves_core.types
+1. **Add kernel edge case tests** (kernel_test.go)
+   - rate_limiter: window boundaries, cleanup, concurrent access
+   - lifecycle: invalid state transitions, TransitionState, Cleanup
+   - resources: AdjustQuota, UpdateElapsedTime, GetAllUsage
+   - types: ProcessState/PCB methods, NewProcessControlBlock
 
-3. Wire KernelClient to LLMGateway in bootstrap.py
-   - Update create_avionics_dependencies() to pass kernel_client
-   - Add connect_kernel_client() async helper
+2. **Add kernel benchmarks** (benchmark_test.go)
+   - Process scheduling throughput
+   - Rate limiter under concurrent load
 
-4. End-to-end test
-   - go run ./coreengine/cmd/kernel
-   - TEST_WITH_KERNEL=true pytest tests/capability/test_kernel_client.py -v
+3. **Verify all tests pass**
+   cd jeeves-core
+   go test ./... -cover
 
-After Session 18:
-- No avionics.* or control_tower.* imports anywhere
-- KernelClient fully wired to LLMGateway
-- Resource tracking flows: Python -> KernelClient -> Go kernel
+Build/Test Commands:
+cd jeeves-core
+go build ./...
+go test ./coreengine/kernel/... -v -cover
+go test ./coreengine/... -v
+go test -bench=. ./coreengine/kernel/...
+
+After Session 20:
+- kernel coverage >80%
+- Benchmarks established for performance baseline
+- jeeves-core production ready
 ```

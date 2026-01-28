@@ -13,7 +13,7 @@ from sqlalchemy import text
 import numpy as np
 
 from shared import get_component_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 class PgVectorRepository:

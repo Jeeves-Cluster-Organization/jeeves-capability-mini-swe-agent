@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, MagicMock, call
 from typing import Any, Dict
 
 from jeeves_infra.distributed.redis_bus import RedisDistributedBus
-from protocols import DistributedTask, QueueStats
+from jeeves_infra.protocols import DistributedTask, QueueStats
 
 
 # =============================================================================

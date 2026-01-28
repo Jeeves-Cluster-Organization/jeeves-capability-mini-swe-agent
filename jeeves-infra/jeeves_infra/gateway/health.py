@@ -14,7 +14,7 @@ from enum import Enum
 from time import monotonic
 from typing import Any, Dict, Optional
 
-from protocols import DatabaseClientProtocol, HealthStatus
+from jeeves_infra.protocols import DatabaseClientProtocol, HealthStatus
 from mission_system.config.constants import PLATFORM_VERSION
 
 

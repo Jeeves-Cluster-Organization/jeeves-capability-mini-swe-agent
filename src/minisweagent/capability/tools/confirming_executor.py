@@ -4,18 +4,13 @@ This module provides a ToolExecutor wrapper that adds confirmation
 handling before executing HIGH-risk tools and tool health monitoring (L7).
 """
 
-import sys
 import time
-from pathlib import Path
 from typing import Any, Dict, Optional
 
-# Add jeeves-core to path
-_jeeves_core_path = Path(__file__).parent.parent.parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
+# jeeves-core is now a proper package - no sys.path manipulation needed
 
-from protocols.agents import ToolExecutor
-from protocols.interrupts import InterruptResponse, InterruptStatus
+from jeeves_infra.runtime import ToolExecutor
+from jeeves_infra.protocols import InterruptResponse, InterruptStatus
 
 from minisweagent.capability.interrupts.confirmation_handler import ConfirmationHandler
 from minisweagent.capability.interrupts.cli_service import CLIInterruptService

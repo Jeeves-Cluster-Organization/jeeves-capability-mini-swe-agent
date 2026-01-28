@@ -571,7 +571,7 @@ async def send_message(
 
     # Look up mode configuration from capability registry (constitutional pattern)
     # Avionics R3: No Domain Logic - registry lookup instead of hardcoded mode names
-    from protocols import get_capability_resource_registry
+    from jeeves_infra.protocols import get_capability_resource_registry
     mode_registry = get_capability_resource_registry()
     mode_config = mode_registry.get_mode_config(body.mode) if body.mode else None
 

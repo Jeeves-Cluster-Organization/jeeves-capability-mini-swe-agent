@@ -22,7 +22,7 @@ Usage:
 
 from typing import Any, Callable, Dict, Optional, Type, TYPE_CHECKING
 from jeeves_infra.logging import get_current_logger
-from jeeves_core import LoggerProtocol, DatabaseClientProtocol
+from jeeves_infra.protocols import LoggerProtocol, DatabaseClientProtocol
 
 if TYPE_CHECKING:
     from jeeves_infra.settings import Settings

@@ -24,7 +24,7 @@ import grpc
 
 from mission_system.adapters import get_logger
 from shared.serialization import datetime_to_ms
-from jeeves_core import LoggerProtocol, get_capability_resource_registry
+from jeeves_infra.protocols import LoggerProtocol, get_capability_resource_registry
 
 try:
     from proto import jeeves_pb2, jeeves_pb2_grpc

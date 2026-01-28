@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 
 import grpc
 from jeeves_infra.logging import get_current_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 # These will be generated from proto/jeeves.proto
 # Run: python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. proto/jeeves.proto

@@ -4,17 +4,12 @@ This module handles mode switching commands from interrupt responses,
 replacing the original InteractiveAgent._prompt_and_handle_special() behavior.
 """
 
-import sys
 from enum import Enum
-from pathlib import Path
 from typing import Optional, Tuple
 
-# Add jeeves-core to path
-_jeeves_core_path = Path(__file__).parent.parent.parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
+# jeeves-core is now a proper package - no sys.path manipulation needed
 
-from protocols.interrupts import InterruptResponse
+from jeeves_infra.protocols import InterruptResponse
 
 
 class ExecutionMode(str, Enum):

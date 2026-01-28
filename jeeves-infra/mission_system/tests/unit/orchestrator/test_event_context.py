@@ -15,7 +15,7 @@ from mission_system.orchestrator.event_context import (
     EventContext,
     create_event_context,
 )
-from jeeves_core import RequestContext
+from jeeves_infra.protocols import RequestContext
 
 
 def _ctx(

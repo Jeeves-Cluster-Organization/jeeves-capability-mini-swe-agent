@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from protocols import DatabaseClientProtocol, GraphStorageProtocol, LoggerProtocol
+from jeeves_infra.protocols import DatabaseClientProtocol, GraphStorageProtocol, LoggerProtocol
 from shared import get_component_logger
 
 

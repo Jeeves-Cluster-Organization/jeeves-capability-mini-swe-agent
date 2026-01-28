@@ -24,7 +24,7 @@ from typing import Any, Dict, Generator, Optional
 
 import structlog
 
-from jeeves_core import LoggerProtocol, RequestContext
+from jeeves_infra.protocols import LoggerProtocol, RequestContext
 
 # Module state
 _CONFIGURED = False

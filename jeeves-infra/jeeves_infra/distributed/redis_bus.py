@@ -10,12 +10,12 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from protocols import (
+from jeeves_infra.protocols import (
     DistributedBusProtocol,
     DistributedTask,
     QueueStats,
 )
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 from jeeves_infra.logging import get_current_logger
 from shared.serialization import parse_datetime
 

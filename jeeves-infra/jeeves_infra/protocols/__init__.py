@@ -107,6 +107,27 @@ from jeeves_infra.protocols.engine_pb2_grpc import (
     add_EngineServiceServicer_to_server,
 )
 
+# =============================================================================
+# CAPABILITY REGISTRATION (moved from jeeves-core/protocols)
+# =============================================================================
+
+from jeeves_infra.protocols.capability import (
+    get_capability_resource_registry,
+    reset_capability_resource_registry,
+    CapabilityResourceRegistry,
+    CapabilityResourceRegistryProtocol,
+    CapabilityToolCatalog,
+    ToolCatalogEntry,
+    ToolDefinition,
+    DomainAgentConfig,
+    CapabilityPromptConfig,
+    CapabilityToolsConfig,
+    CapabilityOrchestratorConfig,
+    CapabilityContractsConfig,
+    DomainServiceConfig,
+    DomainModeConfig,
+)
+
 __all__ = [
     # Enums
     "TerminalReason",
@@ -192,4 +213,19 @@ __all__ = [
     "EngineServiceStub",
     "EngineServiceServicer",
     "add_EngineServiceServicer_to_server",
+    # Capability registration
+    "get_capability_resource_registry",
+    "reset_capability_resource_registry",
+    "CapabilityResourceRegistry",
+    "CapabilityResourceRegistryProtocol",
+    "CapabilityToolCatalog",
+    "ToolCatalogEntry",
+    "ToolDefinition",
+    "DomainAgentConfig",
+    "CapabilityPromptConfig",
+    "CapabilityToolsConfig",
+    "CapabilityOrchestratorConfig",
+    "CapabilityContractsConfig",
+    "DomainServiceConfig",
+    "DomainModeConfig",
 ]

@@ -23,7 +23,7 @@ from jeeves_infra.llm.cost_calculator import get_cost_calculator, CostMetrics
 from jeeves_infra.llm.providers.base import TokenChunk
 from jeeves_infra.settings import Settings
 from jeeves_infra.logging import get_current_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 from jeeves_infra.observability.metrics import record_llm_call, record_llm_tokens
 from jeeves_infra.observability.tracing import get_tracer
 from opentelemetry.trace import Status, StatusCode

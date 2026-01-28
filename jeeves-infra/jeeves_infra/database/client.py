@@ -27,7 +27,7 @@ Usage:
 """
 
 # Re-export protocol from canonical location
-from jeeves_core import DatabaseClientProtocol, VectorStorageProtocol
+from jeeves_infra.protocols import DatabaseClientProtocol, VectorStorageProtocol
 
 # Re-export registry functions
 from jeeves_infra.database.registry import (

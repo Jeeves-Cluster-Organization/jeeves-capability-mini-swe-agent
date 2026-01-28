@@ -24,15 +24,11 @@ Usage:
 """
 
 import logging
-import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
-# Add jeeves-core to path for imports
-_jeeves_core_path = Path(__file__).parent.parent.parent.parent.parent / "jeeves-core"
-if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
-    sys.path.insert(0, str(_jeeves_core_path))
+# jeeves-core is now a proper package - install with: pip install -e ./jeeves-core
+# No sys.path manipulation needed
 
 from protocols.capability import (
     get_capability_resource_registry,
@@ -42,12 +38,11 @@ from protocols.capability import (
     CapabilityToolsConfig,
     CapabilityOrchestratorConfig,
 )
-from protocols import AgentLLMConfig
+from jeeves_infra.protocols import AgentLLMConfig
 
 if TYPE_CHECKING:
     from protocols.capability import CapabilityResourceRegistry
-    from control_tower.kernel import ControlTower
-    from control_tower.ipc.commbus import InMemoryCommBus
+    from jeeves_infra.kernel_client import KernelClient
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +180,7 @@ def _create_orchestrator_service(
     tool_executor,
     log,
     persistence,
-    control_tower=None,
+    kernel_client=None,
 ):
     """Factory function to create the orchestrator service.
 
@@ -197,7 +192,7 @@ def _create_orchestrator_service(
         tool_executor=tool_executor,
         log=log,
         persistence=persistence,
-        control_tower=control_tower,
+        kernel_client=kernel_client,
     )
 
 
@@ -272,7 +267,7 @@ def register_capability() -> None:
 
     # 6. Register LLM configurations with capability registry
     try:
-        from avionics.capability_registry import get_capability_registry
+        from jeeves_infra.capability_registry import get_capability_registry
 
         llm_registry = get_capability_registry()
         for agent_name, config in AGENT_LLM_CONFIGS.items():
@@ -282,7 +277,7 @@ def register_capability() -> None:
                 config=config,
             )
     except ImportError:
-        # avionics not available - running standalone
+        # jeeves_infra not available - running standalone
         pass
 
 
@@ -310,182 +305,71 @@ def get_agent_config(agent_name: str) -> AgentLLMConfig:
 
 @dataclass
 class JeevesContext:
-    """Context containing all wired jeeves-core components.
+    """Context containing wired Go kernel gRPC client.
 
-    This provides access to:
-    - ControlTower: Kernel for lifecycle, resources, IPC, and events
-    - CommBus: Message bus for inter-service communication
-    - Logger: Structured logging
+    Session 15: Python capabilities communicate with Go kernel via gRPC.
 
     Usage:
         context = create_jeeves_context()
-
-        # Use ControlTower for resource tracking
-        context.control_tower.record_llm_call(pid, tokens_in=100, tokens_out=50)
-
-        # Use CommBus for memory operations
-        await context.commbus.query(GetSessionState(session_id="..."))
+        await context.kernel_client.record_llm_call(pid, tokens_in=100, tokens_out=50)
     """
-    control_tower: Optional["ControlTower"] = None
-    commbus: Optional["InMemoryCommBus"] = None
-    db: Optional[Any] = None  # Database connection for persistence
-    _memory_handlers_registered: bool = field(default=False, repr=False)
+    kernel_client: Optional["KernelClient"] = None
+    db: Optional[Any] = None
+    _kernel_address: str = field(default="localhost:50051", repr=False)
 
     def is_wired(self) -> bool:
-        """Check if core components are wired."""
-        return self.control_tower is not None and self.commbus is not None
-
-
-def _create_simple_logger() -> Any:
-    """Create a simple logger adapter for ControlTower.
-
-    ControlTower expects a LoggerProtocol with bind() method.
-    """
-    class SimpleLoggerAdapter:
-        """Adapter to make Python logger compatible with LoggerProtocol."""
-
-        def __init__(self, name: str = "jeeves"):
-            self._logger = logging.getLogger(name)
-            self._context: dict = {}
-
-        def info(self, event: str, **kwargs) -> None:
-            self._logger.info(f"{event}: {kwargs}")
-
-        def warn(self, event: str, **kwargs) -> None:
-            self._logger.warning(f"{event}: {kwargs}")
-
-        def warning(self, event: str, **kwargs) -> None:
-            self._logger.warning(f"{event}: {kwargs}")
-
-        def error(self, event: str, **kwargs) -> None:
-            self._logger.error(f"{event}: {kwargs}")
-
-        def debug(self, event: str, **kwargs) -> None:
-            self._logger.debug(f"{event}: {kwargs}")
-
-        def bind(self, **kwargs) -> "SimpleLoggerAdapter":
-            """Return self with updated context."""
-            adapter = SimpleLoggerAdapter(self._logger.name)
-            adapter._context = {**self._context, **kwargs}
-            return adapter
-
-    return SimpleLoggerAdapter("mini-swe-agent")
+        """Check if kernel client is available."""
+        return self.kernel_client is not None
 
 
 def create_jeeves_context(
     db: Optional[Any] = None,
-    register_memory: bool = True,
+    kernel_address: Optional[str] = None,
 ) -> JeevesContext:
     """Create a JeevesContext with wired jeeves-core components.
 
+    Session 15: This now creates a gRPC client to the Go kernel instead of
+    instantiating Python ControlTower/CommBus directly.
+
     This wires up:
-    1. ControlTower - Kernel for lifecycle, resources, IPC, and events
-    2. InMemoryCommBus - Message bus for inter-service communication
-    3. Memory handlers - Session state, entity tracking, memory search
+    1. KernelClient - gRPC client to Go kernel for lifecycle, resources, events
 
     Args:
         db: Optional database connection for persistent features
-        register_memory: Whether to register memory handlers (default True)
+        kernel_address: gRPC address of Go kernel (default: KERNEL_GRPC_ADDRESS env or localhost:50051)
 
     Returns:
         JeevesContext with wired components
 
     Example:
-        # Basic usage
         context = create_jeeves_context()
-
-        # With database for persistent sessions
-        context = create_jeeves_context(db=async_pool)
-
-        # Use in orchestrator
-        orchestrator = create_swe_orchestrator(
-            control_tower=context.control_tower,
-            ...
-        )
+        orchestrator = create_swe_orchestrator(kernel_client=context.kernel_client, ...)
     """
-    context = JeevesContext()
+    import os
+    from grpc import aio as grpc_aio
+
+    # Determine kernel address
+    if kernel_address is None:
+        kernel_address = os.getenv("KERNEL_GRPC_ADDRESS", "localhost:50051")
+
+    context = JeevesContext(_kernel_address=kernel_address)
 
     try:
-        # Import jeeves-core components
-        from control_tower.kernel import ControlTower
-        from control_tower.ipc.commbus import InMemoryCommBus
-        from control_tower.types import ResourceQuota
+        from jeeves_infra.kernel_client import KernelClient
 
-        # Create logger adapter
-        log = _create_simple_logger()
-
-        # Create default resource quota
-        default_quota = ResourceQuota(
-            max_llm_calls=100,
-            max_tool_calls=200,
-            max_agent_hops=200,
-            max_iterations=50,
-            max_input_tokens=8192,
-            max_output_tokens=4096,
-            max_context_tokens=32768,
-            timeout_seconds=300,
-        )
-
-        # Create ControlTower kernel
-        context.control_tower = ControlTower(
-            logger=log,
-            default_quota=default_quota,
-            default_service=f"{CAPABILITY_ID}_service",
-            db=db,
-        )
-        logger.info("ControlTower kernel initialized")
-
-        # Create CommBus
-        context.commbus = InMemoryCommBus(
-            query_timeout=30.0,
-            logger=log,
-        )
-        logger.info("InMemoryCommBus initialized")
-
-        # Register memory handlers if requested
-        if register_memory:
-            _register_memory_handlers(context, db, log)
+        # Create gRPC channel (lazy - doesn't connect until first call)
+        channel = grpc_aio.insecure_channel(kernel_address)
+        context.kernel_client = KernelClient(channel)
+        logger.info(f"KernelClient initialized (target: {kernel_address})")
 
         context.db = db
 
     except ImportError as e:
-        logger.warning(f"jeeves-core components not available: {e}")
+        logger.warning(f"jeeves_infra.kernel_client not available: {e}")
     except Exception as e:
         logger.error(f"Failed to create JeevesContext: {e}")
 
     return context
-
-
-def _register_memory_handlers(
-    context: JeevesContext,
-    db: Optional[Any],
-    log: Any,
-) -> None:
-    """Register memory handlers with the CommBus.
-
-    Wires up handlers for:
-    - GetSessionState, GetRecentEntities, SearchMemory
-    - ClearSession, UpdateFocus, AddEntityReference
-    """
-    if context.commbus is None:
-        return
-
-    try:
-        from memory_module.handlers import register_memory_handlers
-
-        register_memory_handlers(
-            commbus=context.commbus,
-            session_state_service=None,  # Lazy init from db
-            db=db,
-            logger=log,
-        )
-        context._memory_handlers_registered = True
-        logger.info("Memory handlers registered with CommBus")
-
-    except ImportError as e:
-        logger.debug(f"Memory module not available: {e}")
-    except Exception as e:
-        logger.warning(f"Failed to register memory handlers: {e}")
 
 
 # Global context (lazily initialized)

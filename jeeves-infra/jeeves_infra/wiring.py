@@ -32,7 +32,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-from protocols import (
+from jeeves_infra.protocols import (
     AgentToolAccessProtocol,
     LoggerProtocol,
     LLMProviderProtocol,

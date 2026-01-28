@@ -25,7 +25,7 @@ Usage:
 import time
 from typing import Any, Callable, Dict, List, Optional, Awaitable
 
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 class ToolExecutionCore:

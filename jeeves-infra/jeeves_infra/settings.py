@@ -24,7 +24,7 @@ _URL_PATTERN = re.compile(r'^https?://[^\s/$.?#].[^\s]*$', re.IGNORECASE)
 
 if TYPE_CHECKING:
     from jeeves_infra.feature_flags import FeatureFlags
-    from jeeves_core import LoggerProtocol
+    from jeeves_infra.protocols import LoggerProtocol
 
 
 class Settings(BaseSettings):

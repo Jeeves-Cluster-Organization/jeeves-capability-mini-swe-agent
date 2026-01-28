@@ -21,7 +21,7 @@ from sqlalchemy.pool import NullPool
 from jeeves_infra.logging import get_current_logger
 from shared.serialization import JSONEncoderWithUUID, to_json, from_json
 from jeeves_infra.postgres.constants import UUID_COLUMNS, JSONB_COLUMNS, VECTOR_COLUMNS
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 # Regex pattern for UUID strings (8-4-4-4-12 hex format)
 UUID_PATTERN = re.compile(

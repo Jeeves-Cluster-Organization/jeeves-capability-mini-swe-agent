@@ -59,7 +59,7 @@ def tool_registry(pg_test_db):
     For integration tests that need real tools, import from capability layer
     using sys.path like api/server.py does.
     """
-    from protocols import ToolRegistryProtocol
+    from jeeves_infra.protocols import ToolRegistryProtocol
     from typing import Any, Dict, List
 
     class MockToolRegistry:

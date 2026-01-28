@@ -18,7 +18,7 @@ from typing import Callable, Dict, Optional, TYPE_CHECKING
 from jeeves_infra.logging import get_current_logger
 
 if TYPE_CHECKING:
-    from protocols import LLMProviderProtocol
+    from jeeves_infra.protocols import LLMProviderProtocol
     from jeeves_infra.settings import Settings
 
 # Provider registry - populated lazily

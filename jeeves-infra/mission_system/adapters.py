@@ -17,7 +17,7 @@ Constitutional Compliance:
 
 from typing import Any, Optional, Callable
 # Phase 1.5: Import canonical protocols directly from jeeves_commbus
-from protocols import (
+from jeeves_infra.protocols import (
     PersistenceProtocol,
     LLMProviderProtocol,
     ToolRegistryProtocol,

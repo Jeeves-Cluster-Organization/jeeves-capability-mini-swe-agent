@@ -25,7 +25,7 @@ from typing import Generator, Iterator
 
 import structlog
 
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 # Import base context functions from shared.logging
 from shared.logging import (

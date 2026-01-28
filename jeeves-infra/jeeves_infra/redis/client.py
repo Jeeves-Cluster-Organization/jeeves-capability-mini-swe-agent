@@ -16,7 +16,7 @@ from typing import Optional, List, Tuple, Any
 from datetime import datetime, timedelta
 
 from jeeves_infra.logging import get_current_logger
-from protocols import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 
 class RedisClient:

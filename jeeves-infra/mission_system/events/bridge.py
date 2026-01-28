@@ -16,8 +16,8 @@ Architecture:
 
 from typing import Any, Callable, Dict, Optional
 
-from jeeves_core.types import InterruptKind
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import InterruptKind
+from jeeves_infra.protocols import LoggerProtocol
 
 # KernelEvent - simple dataclass for kernel events (control_tower deleted - Session 14)
 from dataclasses import dataclass

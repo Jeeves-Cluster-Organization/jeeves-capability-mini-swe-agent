@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 import json
 from shared import get_component_logger, convert_uuids_to_strings
-from protocols import LoggerProtocol, DatabaseClientProtocol
+from jeeves_infra.protocols import LoggerProtocol, DatabaseClientProtocol
 
 
 class SQLAdapter:

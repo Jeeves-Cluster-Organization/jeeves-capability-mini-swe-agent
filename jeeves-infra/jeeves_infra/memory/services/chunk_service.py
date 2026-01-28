@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 
 from jeeves_infra.memory.repositories.chunk_repository import ChunkRepository, Chunk
 from shared import get_component_logger
-from protocols import LoggerProtocol, DatabaseClientProtocol
+from jeeves_infra.protocols import LoggerProtocol, DatabaseClientProtocol
 
 
 class ChunkService:

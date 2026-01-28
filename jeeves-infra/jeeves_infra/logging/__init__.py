@@ -28,7 +28,7 @@ from __future__ import annotations
 from contextvars import ContextVar
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
-from jeeves_core import LoggerProtocol
+from jeeves_infra.protocols import LoggerProtocol
 
 # Import base logging from shared (L0)
 from shared.logging import (

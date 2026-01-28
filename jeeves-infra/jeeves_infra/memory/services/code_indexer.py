@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
 from sqlalchemy import text
 
-from protocols import LanguageConfigProtocol, LoggerProtocol, DatabaseClientProtocol
+from jeeves_infra.protocols import LanguageConfigProtocol, LoggerProtocol, DatabaseClientProtocol
 from shared import get_component_logger
 
 if TYPE_CHECKING:

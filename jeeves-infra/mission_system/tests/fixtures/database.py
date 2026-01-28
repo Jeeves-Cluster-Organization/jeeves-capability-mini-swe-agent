@@ -146,7 +146,7 @@ async def pg_test_db(postgres_container):
 
     # Load capability schemas from registry (constitutional pattern)
     # Avionics R3: No Domain Logic - registry lookup instead of hardcoded paths
-    from protocols import get_capability_resource_registry
+    from jeeves_infra.protocols import get_capability_resource_registry
     registry = get_capability_resource_registry()
     for schema_path in registry.get_schemas():
         if Path(schema_path).exists():

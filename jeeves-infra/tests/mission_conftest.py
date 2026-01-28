@@ -69,7 +69,7 @@ def setup_capability_registration():
     This ensures the CapabilityResourceRegistry is populated with
     capability resources for tests that exercise the full stack.
     """
-    from protocols import reset_capability_resource_registry
+    from jeeves_infra.protocols import reset_capability_resource_registry
 
     # Start with clean registry
     reset_capability_resource_registry()

@@ -31,7 +31,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, TypeVar
 
-from protocols import (
+from jeeves_infra.protocols import (
     LoggerProtocol,
     RateLimitResult,
     RateLimitConfig,
