@@ -114,11 +114,11 @@ async def pg_test_db(postgres_container):
     - Predictable, deterministic test behavior
 
     Constitutional Note:
-    - Mission system layer IS the wiring layer between app and avionics
-    - Direct avionics imports are acceptable here for infrastructure setup
+    - Mission system layer IS the wiring layer between app and jeeves_infra
+    - Direct jeeves_infra imports are acceptable here for infrastructure setup
     - App layer tests must use mission_system.adapters instead
     """
-    # Mission system is the wiring layer - avionics imports acceptable
+    # Mission system is the wiring layer - jeeves_infra imports acceptable
     from jeeves_infra.postgres.client import PostgreSQLClient
     from sqlalchemy import text
 
@@ -140,12 +140,12 @@ async def pg_test_db(postgres_container):
     await db.connect()
 
     # Load core schema (infrastructure owns this)
-    # Path is relative to avionics package
-    avionics_schemas_dir = Path(__file__).parent.parent.parent.parent / "avionics" / "database" / "schemas"
-    await db.initialize_schema(str(avionics_schemas_dir / "001_postgres_schema.sql"))
+    # Path is relative to jeeves_infra package
+    infra_schemas_dir = Path(__file__).parent.parent.parent.parent / "jeeves_infra" / "database" / "schemas"
+    await db.initialize_schema(str(infra_schemas_dir / "001_postgres_schema.sql"))
 
     # Load capability schemas from registry (constitutional pattern)
-    # Avionics R3: No Domain Logic - registry lookup instead of hardcoded paths
+    # Infrastructure R3: No Domain Logic - registry lookup instead of hardcoded paths
     from jeeves_infra.protocols import get_capability_resource_registry
     registry = get_capability_resource_registry()
     for schema_path in registry.get_schemas():

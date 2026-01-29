@@ -15,8 +15,8 @@ Constitution v3.0 Compliance:
   REMOVED: OpenLoopService fixture (deleted feature)
 
 Constitutional Import Boundary Note:
-- Mission system layer IS the wiring layer between app and avionics
-- Direct avionics imports are acceptable here for service fixtures
+- Mission system layer IS the wiring layer between app and jeeves_infra
+- Direct jeeves_infra imports are acceptable here for service fixtures
 - App layer tests must use mission_system.adapters instead
 """
 

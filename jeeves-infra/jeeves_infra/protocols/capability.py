@@ -1,8 +1,8 @@
 """Capability Registration Protocols.
 
 Constitutional Reference:
-- Avionics R3: No Domain Logic - infrastructure provides transport, not business logic
-- Avionics R4: Swappable Implementations - capabilities register their own resources
+- Infrastructure R3: No Domain Logic - infrastructure provides transport, not business logic
+- Infrastructure R4: Swappable Implementations - capabilities register their own resources
 - Mission System Constitution: Domain configs OWNED by capabilities
 
 This module defines protocols for capabilities to register their resources
@@ -11,15 +11,15 @@ hardcoded knowledge of specific capabilities.
 
 Usage:
     # In capability startup (jeeves-capability-my-capability)
-    from protocols.capability import get_capability_resource_registry
+    from jeeves_infra.protocols.capability import get_capability_resource_registry
 
     registry = get_capability_resource_registry()
     registry.register_schema("my_capability", "database/schemas/my_schema.sql")
     registry.register_mode("my_capability", DomainModeConfig(...))
     registry.register_service("my_capability", DomainServiceConfig(...))
 
-    # In infrastructure (avionics/mission_system)
-    from protocols.capability import get_capability_resource_registry
+    # In infrastructure (jeeves_infra/mission_system)
+    from jeeves_infra.protocols.capability import get_capability_resource_registry
 
     registry = get_capability_resource_registry()
     schemas = registry.get_schemas()  # Returns all registered schema paths
@@ -67,7 +67,7 @@ class CapabilityToolCatalog:
     CapabilityResourceRegistry.get_tools(capability_id) to get the catalog.
     
     This design ensures:
-    - Avionics R3: No Domain Logic in core (capabilities define their own tools)
+    - Infrastructure R3: No Domain Logic in core (capabilities define their own tools)
     - Full isolation between capabilities
     - No global ToolId enum needed for capability-specific tools
     
@@ -274,7 +274,7 @@ class CapabilityToolsConfig:
 @dataclass
 class CapabilityOrchestratorConfig:
     """Configuration for orchestrator service registered by a capability."""
-    factory: Callable[..., Any]  # Function: (llm_factory, tool_executor, logger, persistence, control_tower) -> service
+    factory: Callable[..., Any]  # Function: (llm_factory, tool_executor, logger, persistence, kernel_client) -> service
     result_type: Optional[type] = None  # The result type class (e.g., CapabilityResult)
 
 

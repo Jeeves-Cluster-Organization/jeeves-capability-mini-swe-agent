@@ -1,9 +1,5 @@
 """Services layer for business logic and centralized mutations.
 
-Unified Interrupt System (v4.0):
-- ConfirmationCoordinator has been REMOVED
-- All interrupt handling now goes through control_tower.services.InterruptService
-
 Constitutional Amendments:
 - DebugAPIService: Time-travel debugging (Amendment XXIII)
 - WorkerCoordinator: Horizontal scaling (Amendment XXIV)

@@ -750,7 +750,7 @@ ON CONFLICT (policy_id) DO NOTHING;
 -- =====================================================================
 -- NOTE: Capability-specific tables moved to capability schemas
 -- =====================================================================
--- The following tables are owned by capabilities (per Avionics R3/R4):
+-- The following tables are owned by capabilities (per Infrastructure R3/R4):
 -- - code_index: See jeeves-capability-code-analyser/database/schemas/
 -- - code_analysis_events: See jeeves-capability-code-analyser/database/schemas/
 --

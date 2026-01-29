@@ -592,7 +592,7 @@ class EventContext:
 
         Constitutional compliance (P2 - Code Context Priority):
             - Provides visibility into agent decision-making
-            - Lives entirely in mission/avionics layer (no core changes)
+            - Lives entirely in mission_system/jeeves_infra layer (no core changes)
             - Does not affect core data structures
         """
         # Config gate: Check feature flag

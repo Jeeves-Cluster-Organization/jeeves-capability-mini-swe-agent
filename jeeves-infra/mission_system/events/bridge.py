@@ -1,13 +1,13 @@
-"""EventBridge - Connects Control Tower events to Mission System.
+"""EventBridge - Connects kernel events to Mission System.
 
 This bridge:
-1. Subscribes to Control Tower's EventAggregator kernel events
+1. Subscribes to kernel event aggregator
 2. Translates them to Mission System event formats
 3. Forwards to WebSocket manager for frontend streaming
 4. Handles interrupt-to-clarification/confirmation translation
 
 Architecture:
-    ControlTower.EventAggregator (kernel events)
+    EventAggregator (kernel events)
            ↓ (subscribe)
     EventBridge (translation layer)
            ↓ (forward)
@@ -19,28 +19,28 @@ from typing import Any, Callable, Dict, Optional
 from jeeves_infra.protocols import InterruptKind
 from jeeves_infra.protocols import LoggerProtocol
 
-# KernelEvent - simple dataclass for kernel events (control_tower deleted - Session 14)
+# KernelEvent - simple dataclass for kernel events
 from dataclasses import dataclass
 from typing import Dict, Any as _Any
 
 @dataclass
 class KernelEvent:
-    """Kernel event (migrated from control_tower.types)."""
+    """Kernel event for internal event passing."""
     event_type: str
     pid: str
     data: Dict[str, _Any]
 
 
 class EventBridge:
-    """Bridges Control Tower kernel events to Mission System event streams.
+    """Bridges kernel events to Mission System event streams.
 
     This is the integration layer between:
-    - Control Tower's EventAggregator (kernel-level events)
+    - Kernel EventAggregator (kernel-level events)
     - Mission System's WebSocketEventManager (frontend streaming)
 
     Usage:
         bridge = EventBridge(
-            event_aggregator=control_tower.events,
+            event_aggregator=kernel_events,
             websocket_manager=event_manager,
             logger=logger,
         )

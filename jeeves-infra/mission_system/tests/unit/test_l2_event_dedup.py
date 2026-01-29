@@ -4,15 +4,15 @@ Tests session-scoped event deduplication in EventEmitter.
 Per CYCLIC_MIGRATION_PLAN.md Phase 3: L2 events deduplicated within session.
 
 Constitutional Import Boundary Note:
-- Mission system layer tests the avionics layer functionality
-- Direct avionics imports are acceptable here for testing
+- Mission system layer tests the jeeves_infra layer functionality
+- Direct jeeves_infra imports are acceptable here for testing
 - App layer tests must use mission_system.adapters instead
 """
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-# Mission system tests avionics functionality - direct import acceptable
+# Mission system tests jeeves_infra functionality - direct import acceptable
 from jeeves_infra.memory.services.event_emitter import (
     EventEmitter,
     SessionDedupCache,

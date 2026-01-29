@@ -1,8 +1,8 @@
-"""Infrastructure settings for Jeeves Avionics.
+"""Infrastructure settings for jeeves_infra.
 
 Constitutional Reference:
-    - Avionics R3: No Domain Logic - infrastructure provides transport, not business logic
-    - Avionics R2: Configuration Over Code - all behavior is configurable
+    - Infrastructure R3: No Domain Logic - infrastructure provides transport, not business logic
+    - Infrastructure R2: Configuration Over Code - all behavior is configurable
     - docs/CONSTITUTION.md: PostgreSQL with pgvector is the ONLY supported backend
 
 Per-Agent Configuration:
@@ -10,7 +10,6 @@ Per-Agent Configuration:
     capabilities and registered via DomainLLMRegistry. This file contains
     only generic infrastructure configuration.
 
-    See: avionics/capability_registry.py
     See: jeeves-capability-*/config/llm_config.py (for capability registration)
 """
 
@@ -34,7 +33,7 @@ class Settings(BaseSettings):
     LLM settings are owned by capabilities via DomainLLMRegistry.
 
     Constitutional Reference:
-        - Avionics R3: No Domain Logic
+        - Infrastructure R3: No Domain Logic
         - Capability Constitution R6: Domain Config Ownership
     """
 

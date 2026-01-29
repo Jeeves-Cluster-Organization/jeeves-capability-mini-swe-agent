@@ -157,6 +157,26 @@ from jeeves_infra.protocols.capability import (
     DomainModeConfig,
 )
 
+# =============================================================================
+# EVENT TYPES (for gateway event bus)
+# =============================================================================
+
+from jeeves_infra.protocols.events import (
+    Event,
+    EventCategory,
+    EventSeverity,
+    EventEmitterProtocol,
+)
+
+# =============================================================================
+# VALIDATION TYPES (for meta-validation)
+# =============================================================================
+
+from jeeves_infra.protocols.validation import (
+    MetaValidationIssue,
+    VerificationReport,
+)
+
 __all__ = [
     # Runtime types
     "Agent",
@@ -270,4 +290,12 @@ __all__ = [
     "CapabilityContractsConfig",
     "DomainServiceConfig",
     "DomainModeConfig",
+    # Event types
+    "Event",
+    "EventCategory",
+    "EventSeverity",
+    "EventEmitterProtocol",
+    # Validation types
+    "MetaValidationIssue",
+    "VerificationReport",
 ]

@@ -3,11 +3,11 @@
 Constitutional Amendment XXIV: Horizontal Scaling Support.
 Coordinates worker processes for distributed pipeline execution.
 
-Control Tower Integration (Post-Integration Phase 2):
-- Creates PCB for each submitted envelope
-- Allocates resource quotas for distributed tasks
+Kernel Integration:
+- Creates process via KernelClient for lifecycle tracking
+- Uses ResourceTracker for resource quota management
 - Tracks resource usage from workers
-- Reports lifecycle events to Control Tower
+- Reports lifecycle events to kernel
 """
 
 import asyncio
@@ -31,10 +31,7 @@ from jeeves_infra.logging import get_current_logger
 
 if TYPE_CHECKING:
     from jeeves_infra.kernel_client import KernelClient
-    # ResourceQuota and SchedulingPriority are now strings/dicts in KernelClient
-    # Keep type aliases for migration compatibility
-    ResourceQuota = Dict[str, Any]  # max_llm_calls, max_tool_calls, etc.
-    SchedulingPriority = str  # "REALTIME", "HIGH", "NORMAL", "LOW", "IDLE"
+    from jeeves_infra.resource_tracker import ResourceTracker
 
 
 @dataclass
@@ -83,6 +80,8 @@ class WorkerCoordinator:
             distributed_bus=redis_bus,
             checkpoint_adapter=postgres_checkpoint,
             runtime=unified_runtime,
+            kernel_client=kernel_client,
+            resource_tracker=resource_tracker,
         )
 
         # Submit work
@@ -101,7 +100,8 @@ class WorkerCoordinator:
         checkpoint_adapter: Optional[CheckpointProtocol] = None,
         runtime: Optional[PipelineRunner] = None,
         logger: Optional[LoggerProtocol] = None,
-        control_tower: Optional["ControlTowerProtocol"] = None,
+        kernel_client: Optional["KernelClient"] = None,
+        resource_tracker: Optional["ResourceTracker"] = None,
     ):
         """Initialize worker coordinator.
 
@@ -110,13 +110,15 @@ class WorkerCoordinator:
             checkpoint_adapter: Optional CheckpointProtocol for state persistence
             runtime: PipelineRunner for executing agents (required for workers)
             logger: Logger for DI
-            control_tower: Optional Control Tower for process lifecycle and resource tracking
+            kernel_client: Optional KernelClient for process lifecycle management
+            resource_tracker: Optional ResourceTracker for quota management
         """
         self._bus = distributed_bus
         self._checkpoints = checkpoint_adapter
         self._runtime = runtime
         self._logger = logger or get_current_logger()
-        self._control_tower = control_tower
+        self._kernel = kernel_client
+        self._tracker = resource_tracker
 
         self._workers: Dict[str, WorkerStatus] = {}
         self._shutdown_event: Optional[asyncio.Event] = None
@@ -127,21 +129,18 @@ class WorkerCoordinator:
         queue_name: str,
         agent_name: Optional[str] = None,
         priority: int = 0,
-        resource_quota: Optional["ResourceQuota"] = None,
     ) -> str:
         """Submit envelope for distributed processing.
 
-        Control Tower Integration:
-        - Creates PCB for lifecycle tracking
-        - Allocates resource quota
-        - Emits process.created event
+        Kernel Integration:
+        - Creates process via KernelClient for lifecycle tracking
+        - Resource tracking via ResourceTracker
 
         Args:
             envelope: Envelope to process
             queue_name: Target queue
             agent_name: Specific agent to run (or next in pipeline)
             priority: Task priority (higher = more urgent)
-            resource_quota: Optional resource quota (uses Control Tower default if None)
 
         Returns:
             Task ID for tracking
@@ -149,36 +148,25 @@ class WorkerCoordinator:
         task_id = f"task_{uuid.uuid4().hex[:16]}"
         pid = envelope.envelope_id
 
-        # Create process via Control Tower (if available)
-        if self._control_tower:
-            from control_tower.types import SchedulingPriority, ResourceQuota as CTResourceQuota
-
-            # Map priority to SchedulingPriority
-            if priority >= 10:
-                ct_priority = SchedulingPriority.HIGH
-            elif priority <= -10:
-                ct_priority = SchedulingPriority.LOW
-            else:
-                ct_priority = SchedulingPriority.NORMAL
-
-            # Create PCB for lifecycle tracking
-            pcb = self._control_tower.lifecycle.submit(
-                envelope=envelope,
-                priority=ct_priority,
-                quota=resource_quota,
-            )
-
-            # Allocate resources
-            quota = resource_quota or CTResourceQuota()
-            self._control_tower.resources.allocate(pid, quota)
-
-            self._logger.info(
-                "control_tower_process_created",
-                pid=pid,
-                priority=ct_priority.value,
-                quota_llm_calls=quota.max_llm_calls,
-                quota_agent_hops=quota.max_agent_hops,
-            )
+        # Create process via kernel if available
+        if self._kernel:
+            try:
+                await self._kernel.create_process(
+                    pid=pid,
+                    user_id=envelope.metadata.get("user_id", "system"),
+                    session_id=envelope.metadata.get("session_id", "default"),
+                )
+                self._logger.info(
+                    "kernel_process_created",
+                    pid=pid,
+                    priority=priority,
+                )
+            except Exception as e:
+                self._logger.warning(
+                    "kernel_process_create_failed",
+                    pid=pid,
+                    error=str(e),
+                )
 
         # Save checkpoint before enqueueing
         checkpoint_id = None
@@ -208,7 +196,7 @@ class WorkerCoordinator:
             task_id=task_id,
             envelope_id=envelope.envelope_id,
             queue=queue_name,
-            has_control_tower=self._control_tower is not None,
+            has_kernel=self._kernel is not None,
         )
 
         return task_id
@@ -345,11 +333,10 @@ class WorkerCoordinator:
     ) -> None:
         """Process a single task.
 
-        Control Tower Integration:
-        - Transitions process state: READY -> RUNNING
-        - Tracks resource usage (agent hops, LLM calls)
-        - Checks quota and terminates if exceeded
-        - Releases resources on completion
+        Resource Tracking:
+        - Records agent hop via ResourceTracker
+        - Checks quota before and after execution
+        - Terminates process via kernel if quota exceeded
         """
         status = self._workers[config.worker_id]
         pid = None
@@ -359,36 +346,22 @@ class WorkerCoordinator:
             envelope = Envelope.from_dict(task.envelope_state)
             pid = envelope.envelope_id
 
-            # Transition to RUNNING state via Control Tower
-            if self._control_tower:
-                from control_tower.types import ProcessState
-
-                self._control_tower.lifecycle.transition_state(
-                    pid=pid,
-                    new_state=ProcessState.RUNNING,
-                    reason=f"Worker {config.worker_id} processing agent {task.agent_name}",
-                )
-
-                # Record agent hop (entering this agent)
-                self._control_tower.resources.record_usage(pid=pid, agent_hops=1)
-
-                # Check quota before execution
-                if quota_exceeded := self._control_tower.resources.check_quota(pid):
+            # Record agent hop and check quota
+            if self._tracker and pid:
+                exceeded = await self._tracker.record_agent_hop(pid)
+                if exceeded:
                     self._logger.warning(
                         "task_quota_exceeded",
                         task_id=task.task_id,
                         pid=pid,
-                        reason=quota_exceeded,
+                        reason=exceeded,
                     )
-                    # Terminate the process
-                    self._control_tower.lifecycle.terminate(
-                        pid=pid,
-                        reason=quota_exceeded,
-                        force=False,
-                    )
+                    # Terminate via kernel if available
+                    if self._kernel:
+                        await self._kernel.terminate_process(pid, reason=exceeded)
                     await self._bus.fail_task(
                         task.task_id,
-                        f"Quota exceeded: {quota_exceeded}",
+                        f"Quota exceeded: {exceeded}",
                         retry=False,
                     )
                     status.failed_tasks += 1
@@ -406,33 +379,28 @@ class WorkerCoordinator:
                 raise RuntimeError("No handler or runtime configured")
 
             # Record resource usage from result envelope
-            if self._control_tower and pid:
+            if self._tracker and pid:
                 # Extract usage from envelope metadata if available
                 llm_calls = result_envelope.metadata.get("llm_call_count", 0)
                 tool_calls = result_envelope.metadata.get("tool_call_count", 0)
                 tokens_in = result_envelope.metadata.get("total_tokens_in", 0)
                 tokens_out = result_envelope.metadata.get("total_tokens_out", 0)
 
-                if llm_calls or tool_calls or tokens_in or tokens_out:
-                    self._control_tower.resources.record_usage(
-                        pid=pid,
-                        llm_calls=llm_calls,
-                        tool_calls=tool_calls,
-                        tokens_in=tokens_in,
-                        tokens_out=tokens_out,
+                if llm_calls:
+                    exceeded = await self._tracker.record_llm_call(
+                        pid, tokens_in=tokens_in, tokens_out=tokens_out
                     )
+                    if exceeded:
+                        result_envelope.terminated = True
+                        result_envelope.termination_reason = exceeded
 
-                # Check quota after execution
-                if quota_exceeded := self._control_tower.resources.check_quota(pid):
-                    self._logger.warning(
-                        "task_quota_exceeded_after_run",
-                        task_id=task.task_id,
-                        pid=pid,
-                        reason=quota_exceeded,
-                    )
-                    # Mark envelope as terminated
-                    result_envelope.terminated = True
-                    result_envelope.termination_reason = quota_exceeded
+                if tool_calls:
+                    for _ in range(tool_calls):
+                        exceeded = await self._tracker.record_tool_call(pid)
+                        if exceeded:
+                            result_envelope.terminated = True
+                            result_envelope.termination_reason = exceeded
+                            break
 
             # Save checkpoint if enabled
             if self._checkpoints:
@@ -460,7 +428,7 @@ class WorkerCoordinator:
                 "task_completed",
                 task_id=task.task_id,
                 agent=task.agent_name,
-                has_control_tower=self._control_tower is not None,
+                has_tracker=self._tracker is not None,
             )
 
         except Exception as e:
@@ -473,13 +441,16 @@ class WorkerCoordinator:
                 error=str(e),
             )
 
-            # Transition to TERMINATED state on failure
-            if self._control_tower and pid:
-                self._control_tower.lifecycle.terminate(
-                    pid=pid,
-                    reason=str(e),
-                    force=False,
-                )
+            # Terminate via kernel on failure
+            if self._kernel and pid:
+                try:
+                    await self._kernel.terminate_process(pid, reason=str(e))
+                except Exception as term_err:
+                    self._logger.warning(
+                        "kernel_terminate_failed",
+                        pid=pid,
+                        error=str(term_err),
+                    )
 
             await self._bus.fail_task(
                 task.task_id,

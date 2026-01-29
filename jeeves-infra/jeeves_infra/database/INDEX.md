@@ -1,6 +1,6 @@
-# Jeeves Avionics - Database Module
+# jeeves_infra - Database Module
 
-**Parent:** [Avionics Index](../INDEX.md)
+**Parent:** [jeeves_infra Index](../INDEX.md)
 
 ---
 
@@ -8,7 +8,6 @@
 
 Database clients for PostgreSQL (primary). Implements connection pooling, health checks, and schema management.
 
-**Note:** Redis support is available for distributed bus functionality (see `avionics/distributed/`).
 Database clients implement `DatabaseClientProtocol` from `protocols`.
 
 ---
@@ -29,7 +28,7 @@ Database clients implement `DatabaseClientProtocol` from `protocols`.
 |-----------|-------------|
 | `schemas/` | Database schema definitions |
 
-**Note:** Implementation classes (`PostgreSQLClient`, `RedisClient`, etc.) and repository patterns are in `jeeves_infra/` package.
+**Note:** Implementation classes (`PostgreSQLClient`, etc.) and repository patterns are in `jeeves_infra/` package.
 
 ---
 
@@ -61,4 +60,4 @@ class PostgresClient:
 
 ---
 
-*Last updated: 2025-12-16*
+*Last updated: 2026-01-30*

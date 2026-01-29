@@ -41,7 +41,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Set
 from weakref import WeakSet
 
 from jeeves_infra.logging import get_current_logger
-from protocols.events import (
+from jeeves_infra.protocols.events import (
     Event,
     EventCategory,
     EventSeverity,
@@ -63,9 +63,9 @@ class GatewayEventBus(EventEmitterProtocol):
     - Implements EventEmitterProtocol for swappable implementations
 
     Constitutional Compliance:
-    - Avionics R2 (Configuration Over Code): Event schema defined declaratively
-    - Avionics R3 (No Domain Logic): Pure transport - no business logic
-    - Avionics R4 (Swappable Implementations): Implements EventEmitterProtocol
+    - Infrastructure R2 (Configuration Over Code): Event schema defined declaratively
+    - Infrastructure R3 (No Domain Logic): Pure transport - no business logic
+    - Infrastructure R4 (Swappable Implementations): Implements EventEmitterProtocol
     - Decouples publishers from subscribers
     - Routers don't need to know about WebSocket implementation
     - WebSocket handler doesn't need to know about router internals

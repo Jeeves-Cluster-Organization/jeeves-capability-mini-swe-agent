@@ -1,142 +1,111 @@
-# Jeeves Mission System - Application Layer Index
+# Jeeves Mission System - Orchestration Layer Index
 
-**Parent:** [Capability Contract](../CONTRACT.md)
-**Updated:** 2025-12-16
+**Updated:** 2026-01-29
 
 ---
 
 ## Overview
 
-This directory contains the **application layer** of the Jeeves runtime. It implements orchestration, API endpoints, and provides the framework for capabilities to build upon.
+This directory contains the **orchestration layer (L2)** of the Jeeves runtime. It implements API endpoints, services, and orchestration for capabilities.
 
 **Position in Architecture:**
 ```
-Capability Layer (external)       →  Domain-specific capabilities (e.g., code analysis)
+L3: Capability Layer          →  Domain-specific capabilities (mini-swe-agent, etc.)
         ↓
-mission_system/            →  Application layer (THIS)
+L2: mission_system/           →  Orchestration layer (THIS)
         ↓
-avionics/                  →  Infrastructure (database, LLM, gateway)
+L1: jeeves_infra/             →  Infrastructure (protocols, LLM, memory, database)
         ↓
-control_tower/             →  Kernel layer (lifecycle, resources, IPC)
-        ↓
-protocols/, shared/ →  Foundation (L0)
-        ↓
-commbus/, coreengine/             →  Go core
+L0: jeeves-core               →  Go kernel (process management, CommBus, scheduling)
 ```
 
-**Key Principle:** This layer provides application-specific orchestration and the framework for capabilities to build on.
+**Key Principle:** This layer provides orchestration and the framework for capabilities to build on.
 
 ---
 
 ## Directory Structure
 
+### Gateway (HTTP/gRPC)
+
+| Directory | Description |
+|-----------|-------------|
+| [gateway/](gateway/) | HTTP→gRPC gateway (FastAPI, routers, WebSocket) |
+
 ### Orchestration
 
 | Directory | Description |
 |-----------|-------------|
-| [orchestrator/](orchestrator/) | Flow orchestration (FlowService, VerticalService, events) |
+| [orchestrator/](orchestrator/) | Flow orchestration (FlowService, events) |
 
-### Verticals
-
-| Directory | Description |
-|-----------|-------------|
-| [verticals/](verticals/) | Vertical registry and base classes |
-
-**Note:** Domain-specific agent pipelines belong in capability layers, not here.
-
-### API & Services
+### Services
 
 | Directory | Description |
 |-----------|-------------|
-| [api/](api/) | HTTP API endpoints (chat, health, governance) |
 | [services/](services/) | ChatService, WorkerCoordinator |
-| [contracts/](contracts/) | Contract definitions |
-| [prompts/](prompts/) | Core prompts |
 
 ### Configuration
 
 | Directory | Description |
 |-----------|-------------|
 | [bootstrap.py](bootstrap.py) | Composition root, create_app_context() |
+| [config/](config/) | Configuration and constants |
 
-### Operations
+### Testing
 
 | Directory | Description |
 |-----------|-------------|
-| [scripts/](scripts/) | Operational scripts (import boundary checks, etc.) |
-| [tests/](tests/) | Test suites (unit, contract, integration) |
-
----
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `__init__.py` | Package exports, version info |
+| [tests/](tests/) | Test suites (unit, integration, e2e) |
 
 ---
 
 ## Import Boundary Rules
 
 **Mission System may import:**
-- ✅ `protocols` - Protocol definitions, types
-- ✅ `shared` - Shared utilities (logging, serialization, UUID)
-- ✅ `avionics` - Infrastructure layer
-- ✅ `control_tower` - Kernel layer
+- ✅ `jeeves_infra` - Infrastructure layer (protocols, LLM, memory, database)
 
 **Mission System must NOT:**
-- ❌ Be imported by `coreengine` (core is standalone Go)
-- ❌ Be imported by `avionics` (one-way dependency)
-- ❌ Be imported by `control_tower` (one-way dependency)
+- ❌ Be imported by `jeeves_infra` (one-way dependency)
+- ❌ Import from capabilities (capabilities import from mission_system)
 
 **Example:**
 ```python
 # ALLOWED
-from protocols import Envelope, InterruptKind
-from shared import get_component_logger, parse_datetime
-from jeeves_infra.llm import LLMClient
-from avionics.database import DatabaseClient
+from jeeves_infra.protocols import Envelope, InterruptKind, RequestContext
+from jeeves_infra.llm import LLMProvider
+from jeeves_infra.kernel_client import KernelClient
+from jeeves_infra.database.client import create_database_client
 
-# NOT ALLOWED (these layers cannot import mission system)
-# coreengine importing mission_system.*
-# avionics importing mission_system.*
-# control_tower importing mission_system.*
+# NOT ALLOWED
+# jeeves_infra importing mission_system.*
 ```
 
 ---
 
-## Deployment
+## Gateway Architecture
 
-The mission system provides framework primitives for capabilities:
+```
+HTTP Request                          gRPC Orchestrator
+     │                                      │
+     ▼                                      │
+┌─────────┐    gRPC      ┌─────────────────┐
+│ app.py  │─────────────►│  Go Kernel      │
+│ (proxy) │              │  + Orchestrator │
+└─────────┘              └─────────────────┘
+```
 
-**Mission System Framework:**
-- Provides: Stable API via `mission_system.api`
-- Exports: `MissionRuntime`, `create_mission_runtime()`
-- Role: Framework that capabilities build on (NOT an application)
-
-**Capabilities (Applications):**
-- Capability entry points are defined in external capability repositories
-- Protocol: gRPC on port 50051 (configurable)
-- Capabilities import FROM mission system API (constitutional)
-
-**API Gateway:**
-- Contains: Minimal web layer (handled by avionics/gateway/)
-- Entry point: `avionics.gateway.main`
-- Protocol: HTTP/REST on port 8000
-
-See [Dockerfile](../Dockerfile) and [docker-compose.yml](../docker-compose.yml) for build configuration.
+- `app.py` is stateless - all state in kernel/orchestrator
+- Health endpoints (`/health`, `/ready`) work without gRPC
+- API endpoints (`/api/v1/*`) require running orchestrator
 
 ---
 
 ## Related
 
-- [coreengine/](../coreengine/) - Core runtime (Go)
-- [protocols/](../protocols/) - Python protocols
-- [shared/](../shared/) - Shared utilities (logging, serialization, UUID)
-- [avionics/](../avionics/) - Infrastructure layer
-- [control_tower/](../control_tower/) - Control Tower (kernel layer)
+- [jeeves_infra/](../jeeves_infra/) - Infrastructure layer
+- [ARCHITECTURE_TRACKER.md](../ARCHITECTURE_TRACKER.md) - Full architecture docs
+- [CONSTITUTION.md](CONSTITUTION.md) - Mission System constitution
 - [bootstrap.py](bootstrap.py) - Application bootstrap
 
 ---
 
-*This directory represents the application layer in the three-component split (Amendment XXII).*
+*This directory represents the orchestration layer (L2) in the Agentic OS architecture.*

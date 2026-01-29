@@ -5,12 +5,12 @@ PostgreSQL is the default backend (Constitution v3.0).
 
 Constitutional Reference:
 - CommBus: DatabaseClientProtocol definition
-- Avionics R4: Swappable Implementations
-- Avionics R6: Database Backend Registry
+- Infrastructure R4: Swappable Implementations
+- Infrastructure R6: Database Backend Registry
 - PostgreSQL Decoupling Audit (Option B)
 
 Usage:
-    from avionics.database.client import (
+    from jeeves_infra.database.client import (
         DatabaseClientProtocol,
         create_database_client,
     )

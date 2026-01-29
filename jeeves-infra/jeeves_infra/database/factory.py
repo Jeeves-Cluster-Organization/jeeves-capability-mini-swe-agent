@@ -1,9 +1,9 @@
 """Database factory using registry pattern.
 
 Constitutional Reference:
-- Avionics R4: Swappable Implementations
-- Avionics R6: Database Backend Registry
-- Avionics R2: Configuration Over Code
+- Infrastructure R4: Swappable Implementations
+- Infrastructure R6: Database Backend Registry
+- Infrastructure R2: Configuration Over Code
 - PostgreSQL Decoupling Audit (Option B)
 
 Ownership Model:
@@ -69,7 +69,7 @@ async def _maybe_init_schema(client: DatabaseClientProtocol, logger: LoggerProto
     - Capability schemas are registered via CapabilityResourceRegistry
     - Infrastructure queries the registry, avoiding hardcoded capability knowledge
 
-    Reference: Avionics R3 (No Domain Logic), R4 (Swappable Implementations)
+    Reference: Infrastructure R3 (No Domain Logic), R4 (Swappable Implementations)
     """
     # Only PostgreSQL has schema initialization for now
     if client.backend != "postgres":

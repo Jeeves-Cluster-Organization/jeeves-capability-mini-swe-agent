@@ -384,8 +384,8 @@ class PostgreSQLClient:
                 become user-editable.
 
             Constitutional Compliance:
-                - Avionics R3 (No Domain Logic): ✅ Pure infrastructure utility
-                - Avionics R6 (Defensive Error Handling): ⚠️ Partial (no validation for unclosed quotes)
+                - Infrastructure R3 (No Domain Logic): ✅ Pure infrastructure utility
+                - Infrastructure R6 (Defensive Error Handling): ⚠️ Partial (no validation for unclosed quotes)
             """
             statements: List[str] = []
             current: List[str] = []
@@ -607,7 +607,7 @@ class PostgreSQLClient:
         # Import uuid_str for UUID handling at ingestion layer
         from jeeves_infra.utils.uuid_utils import uuid_str
 
-        # Column constants imported from avionics.database.constants
+        # Column constants for special column types
         # Convert values for special column types
         converted_data = {}
         placeholder_parts = []
@@ -659,7 +659,7 @@ class PostgreSQLClient:
         # Import uuid_str for UUID handling at ingestion layer
         from jeeves_infra.utils.uuid_utils import uuid_str
 
-        # Column constants imported from avionics.database.constants
+        # Column constants for known UUID columns
         # Convert UUID values for known UUID columns
         converted_data = {}
         for key, value in data.items():

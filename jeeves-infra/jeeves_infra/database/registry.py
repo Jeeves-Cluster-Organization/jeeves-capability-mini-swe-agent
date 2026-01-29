@@ -5,13 +5,13 @@ for multiple backends. The registry is empty by default - backends
 must be registered by the application/capability at startup.
 
 Constitutional Reference:
-- Avionics R4: Swappable Implementations
-- Avionics R6: Database Backend Registry
+- Infrastructure R4: Swappable Implementations
+- Infrastructure R6: Database Backend Registry
 - PostgreSQL Decoupling Audit (Option B)
 
 Usage:
     # In capability/application startup:
-    from avionics.database.registry import register_backend
+    from jeeves_infra.database.registry import register_backend
     from jeeves_infra.postgres.client import PostgreSQLClient
 
     register_backend("postgres", PostgreSQLClient, postgres_config_builder)
@@ -164,7 +164,7 @@ def postgres_config_builder(settings: 'Settings', logger: LoggerProtocol) -> Dic
     This is a helper function that can be used when registering the postgres backend:
 
         from jeeves_infra.postgres.client import PostgreSQLClient
-        from avionics.database.registry import register_backend, postgres_config_builder
+        from jeeves_infra.database.registry import register_backend, postgres_config_builder
 
         register_backend("postgres", PostgreSQLClient, postgres_config_builder)
     """

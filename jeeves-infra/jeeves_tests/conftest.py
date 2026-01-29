@@ -1,7 +1,7 @@
-"""Pytest configuration for avionics tests.
+"""Pytest configuration for jeeves_infra tests.
 
-This conftest.py provides fixtures and configuration for the avionics
-test suite. Avionics tests may use database containers but should mock
+This conftest.py provides fixtures and configuration for the jeeves_infra
+test suite. Tests may use database containers but should mock
 core engine protocols when testing in isolation.
 
 Key Principles:

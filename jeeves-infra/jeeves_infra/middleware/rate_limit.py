@@ -1,15 +1,15 @@
 """Rate Limit Middleware for API layer.
 
 Provides middleware for rate limiting API requests. Integrates with
-Control Tower's ResourceTracker and RateLimiter.
+the ResourceTracker and RateLimiter.
 
 Architecture:
-- RateLimiter (Control Tower) defines and tracks limits
+- RateLimiter defines and tracks limits
 - This middleware enforces at the API boundary
 - Returns standard HTTP 429 responses with Retry-After header
 
 Usage with FastAPI:
-    from avionics.middleware import RateLimitMiddleware
+    from jeeves_infra.middleware import RateLimitMiddleware
 
     app = FastAPI()
     rate_limiter = RateLimiter(logger)
@@ -23,7 +23,7 @@ Usage with generic ASGI:
     middleware = create_rate_limit_middleware(rate_limiter)
     app = middleware(app)
 
-Constitutional Reference: API layer integration with Control Tower
+Constitutional Reference: API layer integration with ResourceTracker
 """
 
 import functools

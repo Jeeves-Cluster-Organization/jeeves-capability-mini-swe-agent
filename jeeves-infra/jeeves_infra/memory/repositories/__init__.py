@@ -1,8 +1,5 @@
 """Memory repositories for data persistence.
 
-Memory Module Audit (2025-12-09):
-- Moved from avionics/memory/repositories/
-
 Repositories:
 - EventRepository: L2 append-only event log
 - TraceRepository: Agent execution traces
@@ -13,11 +10,11 @@ Repositories:
 - ToolMetricsRepository: L7 tool health metrics
 - InMemorySkillStorage: L6 skills stub for development
 
-For production graph storage, use PostgresGraphAdapter from avionics.database.
+For production graph storage, use PostgresGraphAdapter from jeeves_infra.postgres.
 
 Constitutional Reference:
 - Memory Module CONSTITUTION: L5 Graph, L6 Skills (extensible)
-- Architecture: PostgreSQL-specific code lives in avionics (L3)
+- Architecture: PostgreSQL-specific code lives in jeeves_infra.postgres
 """
 
 from jeeves_infra.memory.repositories.event_repository import EventRepository, DomainEvent
@@ -41,7 +38,7 @@ __all__ = [
     "PgVectorRepository",
     "ChunkRepository",
     "Chunk",
-    # L5 Graph (in-memory stub - for production use PostgresGraphAdapter from avionics)
+    # L5 Graph (in-memory stub - for production use PostgresGraphAdapter)
     "InMemoryGraphStorage",
     "GraphNode",
     "GraphEdge",

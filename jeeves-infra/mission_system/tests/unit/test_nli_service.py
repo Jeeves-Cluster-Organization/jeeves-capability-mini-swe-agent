@@ -5,15 +5,15 @@ Tests the claim verification functionality used by the Critic agent
 for anti-hallucination validation per Constitution P1.
 
 Constitutional Import Boundary Note:
-- Mission system layer tests the avionics layer functionality
-- Direct avionics imports are acceptable here for testing
+- Mission system layer tests the jeeves_infra layer functionality
+- Direct jeeves_infra imports are acceptable here for testing
 - App layer tests must use mission_system.adapters instead
 """
 
 import pytest
 from unittest.mock import MagicMock, patch
 
-# Mission system tests avionics functionality - direct import acceptable
+# Mission system tests jeeves_infra functionality - direct import acceptable
 from jeeves_infra.memory.services.nli_service import (
     NLIService,
     NLIResult,

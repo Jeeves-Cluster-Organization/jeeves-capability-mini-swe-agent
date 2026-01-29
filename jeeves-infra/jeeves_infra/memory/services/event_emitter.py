@@ -193,8 +193,8 @@ class EventEmitter:
     during retries within the same session.
 
     Constitutional Reference:
-        - Memory Module: FORBIDDEN jeeves_infra.memory → avionics.*
-        - Use protocol injection instead of direct imports
+        - Memory Module: Use protocol injection instead of direct imports
+        - Respect layer boundaries (L1 infra → L0 core only)
     """
 
     def __init__(

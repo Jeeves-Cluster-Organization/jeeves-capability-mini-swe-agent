@@ -1,17 +1,17 @@
-"""Mock implementations for testing mission_system.
+"""Mock implementations for testing jeeves_infra and mission_system.
 
 Centralized Architecture (v4.0):
 - MockEnvelope replaces MockCoreEnvelope
 - No MockAgent (agents are config-driven)
 
-This package provides mocks for jeeves_core_engine and avionics
-dependencies, allowing mission system tests to run in isolation.
+This package provides mocks for jeeves_core_engine and jeeves_infra
+dependencies, allowing tests to run in isolation.
 
 Usage:
-    from mission_system.tests.fixtures.mocks import MockLLMAdapter, MockDatabaseClient
+    from jeeves_tests.fixtures.mocks import MockLLMAdapter, MockDatabaseClient
 """
 
-from .avionics_mocks import (
+from .infra_mocks import (
     MockLLMAdapter,
     MockDatabaseClient,
     MockMemoryService,
@@ -19,7 +19,7 @@ from .avionics_mocks import (
 )
 
 __all__ = [
-    # Avionics mocks
+    # Infrastructure mocks
     "MockLLMAdapter",
     "MockDatabaseClient",
     "MockMemoryService",

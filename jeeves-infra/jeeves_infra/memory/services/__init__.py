@@ -17,7 +17,7 @@ Infrastructure Services:
 - CodeIndexer: Code indexing for semantic search
 
 Memory Module Audit (2025-12-09):
-- Moved from avionics/memory/services/
+- Consolidated in jeeves_infra/memory/services/
 """
 
 from jeeves_infra.memory.services.nli_service import NLIService, get_nli_service

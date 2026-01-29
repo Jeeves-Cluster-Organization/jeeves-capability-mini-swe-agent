@@ -1,4 +1,4 @@
-"""Mock implementations for avionics dependencies.
+"""Mock implementations for jeeves_infra dependencies.
 
 These mocks allow mission system tests to run without requiring
 actual database connections, LLM providers, or memory services.

@@ -5,7 +5,7 @@ Per ADR-001 Decision 3: No global state.
 Context bounds are accessed via AppContext.get_context_bounds().
 
 Usage:
-    from avionics.context import AppContext
+    from jeeves_infra.context import AppContext
 
     # AppContext is passed via DI
     def my_function(context: AppContext):

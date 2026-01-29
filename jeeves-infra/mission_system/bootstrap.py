@@ -247,11 +247,11 @@ def create_app_context(
         enable_otel=feature_flags.enable_tracing,
     )
 
-    # Build root logger (avionics provides structlog wrapper)
+    # Build root logger (jeeves_infra provides structlog wrapper)
     from jeeves_infra.logging import create_logger
     root_logger = create_logger("jeeves")
 
-    # Get default service from capability registry (layer extraction support, Avionics R4)
+    # Get default service from capability registry (layer extraction support, Infrastructure R4)
     capability_registry = get_capability_resource_registry()
     default_service = capability_registry.get_default_service() or "jeeves"
 
@@ -301,15 +301,15 @@ def create_app_context(
     )
 
 
-def create_avionics_dependencies(
+def create_infra_dependencies(
     app_context: AppContext,
     language_config: Optional["LanguageConfigProtocol"] = None,
     node_profiles: Optional["InferenceEndpointsProtocol"] = None,
     access_checker: Optional["AgentToolAccessProtocol"] = None,
 ):
-    """Create and inject dependencies into avionics layer.
+    """Create and inject dependencies into infrastructure layer.
 
-    This function sets up the dependency injection for avionics
+    This function sets up the dependency injection for infrastructure
     components that need capability-owned implementations.
 
     ADR-001 Decision 1: Layer Violation Resolution via Protocol Injection
@@ -357,44 +357,14 @@ def create_avionics_dependencies(
             settings=app_context.settings,
             fallback_providers=fallback_providers,
             logger=gateway_logger,
+            kernel_client=app_context.kernel_client,
         )
-
-        # Wire resource tracking callback to Control Tower if available
-        if app_context.control_tower is not None:
-            def create_resource_callback(control_tower: ControlTower):
-                """Create a resource tracking callback for the gateway.
-
-                Uses the request_pid_context ContextVar to get the current
-                request's PID for per-request resource tracking.
-
-                Args:
-                    control_tower: Control Tower instance for resource tracking
-
-                Returns:
-                    Callback function that records LLM usage and checks quota
-                """
-                def track_resources(tokens_in: int, tokens_out: int) -> Optional[str]:
-                    # Get current process ID from request context
-                    pid = get_request_pid()
-                    if pid is None:
-                        # No request context - allow but don't track
-                        return None
-
-                    # Record the LLM call and check quota
-                    return control_tower.record_llm_call(
-                        pid=pid,
-                        tokens_in=tokens_in,
-                        tokens_out=tokens_out,
-                    )
-                return track_resources
-
-            llm_gateway.set_resource_callback(create_resource_callback(app_context.control_tower))
 
         gateway_logger.info(
             "llm_gateway_initialized",
             primary_provider=primary_provider,
             fallback_providers=fallback_providers,
-            resource_tracking_enabled=app_context.control_tower is not None,
+            resource_tracking_enabled=app_context.kernel_client is not None,
         )
 
     return {
@@ -546,21 +516,33 @@ def create_distributed_infrastructure(
                     message="enable_checkpoints=true but no postgres_client provided",
                 )
 
-        # Create worker coordinator with Control Tower and checkpoint integration
+        # Create worker coordinator with kernel and resource tracking
         coordinator_logger = create_logger("worker_coordinator")
+
+        # Create ResourceTracker for quota management
+        resource_tracker = None
+        if app_context.kernel_client:
+            from jeeves_infra.resource_tracker import ResourceTracker
+            from jeeves_infra.config import ResourceConfig
+            resource_tracker = ResourceTracker(
+                kernel_client=app_context.kernel_client,
+                config=ResourceConfig.from_env(),
+            )
+
         worker_coordinator = WorkerCoordinator(
             distributed_bus=distributed_bus,
             checkpoint_adapter=checkpoint_adapter,
             runtime=None,  # Runtime provided separately per worker
             logger=coordinator_logger,
-            control_tower=app_context.control_tower,
+            kernel_client=app_context.kernel_client,
+            resource_tracker=resource_tracker,
         )
         result["worker_coordinator"] = worker_coordinator
 
         app_context.logger.info(
             "distributed_infrastructure_created",
             redis_url=actual_redis_url.split("@")[-1],  # Redact credentials
-            has_control_tower=app_context.control_tower is not None,
+            has_kernel_client=app_context.kernel_client is not None,
             has_checkpoint_adapter=checkpoint_adapter is not None,
         )
 
@@ -655,7 +637,7 @@ async def create_memory_manager(
 
 __all__ = [
     "create_app_context",
-    "create_avionics_dependencies",
+    "create_infra_dependencies",
     "create_tool_executor_with_access",
     "create_core_config_from_env",
     "create_orchestration_flags_from_env",

@@ -38,7 +38,7 @@ router = APIRouter()
 # Event Publishing (Constitutional Pattern)
 # =============================================================================
 
-# Event type → category mapping (Configuration Over Code - Avionics R2)
+# Event type → category mapping (Configuration Over Code - Infrastructure R2)
 # Standardized naming convention: <component>.<subcomponent>.<action>
 EVENT_CATEGORY_MAP: Dict[str, "EventCategory"] = {
     # Generic agent lifecycle events
@@ -96,8 +96,8 @@ def _classify_event_category(event_type: str) -> "EventCategory":
         EventCategory enum value
 
     Constitutional Alignment:
-        - Avionics R2 (Configuration Over Code): Event mappings are configuration
-        - Avionics R3 (No Domain Logic): Pure infrastructure categorization
+        - Infrastructure R2 (Configuration Over Code): Event mappings are configuration
+        - Infrastructure R3 (No Domain Logic): Pure infrastructure categorization
 
     Examples:
         >>> _classify_event_category("agent.started")
@@ -106,7 +106,7 @@ def _classify_event_category(event_type: str) -> "EventCategory":
         >>> _classify_event_category("perception.complete")  # legacy
         EventCategory.AGENT_LIFECYCLE  # via prefix match
     """
-    from protocols.events import EventCategory
+    from jeeves_infra.protocols.events import EventCategory
 
     # Exact match lookup (O(1))
     if event_type in EVENT_CATEGORY_MAP:
@@ -132,12 +132,12 @@ async def _publish_unified_event(event: dict):
         event: Dict containing event data from gRPC FlowEvent payload
     """
     from mission_system.gateway.event_bus import gateway_events
-    from protocols.events import (
+    from jeeves_infra.protocols.events import (
         Event,
         EventCategory,
         EventSeverity,
     )
-    from protocols.protocols import RequestContext
+    from jeeves_infra.protocols import RequestContext
     from datetime import datetime, timezone
     import uuid
 
@@ -209,7 +209,7 @@ class MessageResponse(BaseModel):
 """
 NOTE: ConfirmationSend and ClarificationSend models have been removed.
 All interrupt responses now go through the unified /interrupts/{id}/respond endpoint.
-See avionics/gateway/routers/interrupts.py
+See mission_system/gateway/routers/interrupts.py
 """
 
 
@@ -267,8 +267,8 @@ def _build_grpc_request(user_id: str, body: MessageSend) -> "jeeves_pb2.FlowRequ
         jeeves_pb2.FlowRequest ready for gRPC call
 
     Constitutional Compliance:
-        - Avionics R1 (Adapter Pattern): Adapts HTTP → gRPC
-        - Avionics R3 (No Domain Logic): Pure request transformation
+        - Infrastructure R1 (Adapter Pattern): Adapts HTTP → gRPC
+        - Infrastructure R3 (No Domain Logic): Pure request transformation
     """
     context = {}
     if body.mode:
@@ -299,7 +299,7 @@ def _is_internal_event(event_type: "jeeves_pb2.FlowEvent") -> bool:
         True if event should be broadcast, False if it's a terminal event
 
     Constitutional Pattern:
-        - Avionics (Gateway) emits internal events to gateway_events bus
+        - Gateway emits internal events to gateway_events bus
         - WebSocket handler subscribes and broadcasts to frontend
         - Zero coupling between router and WebSocket implementation
 
@@ -340,7 +340,7 @@ class EventHandler(ABC):
     Each handler converts gRPC payload to MessageResponse dict format.
 
     Constitutional Compliance:
-        - Avionics R1 (Adapter Pattern): Implements gRPC → HTTP response transformation
+        - Infrastructure R1 (Adapter Pattern): Implements gRPC → HTTP response transformation
     """
 
     @abstractmethod
@@ -499,7 +499,7 @@ async def _process_event_stream(
         HTTPException: If stream completes without a terminal event
 
     Constitutional Pattern:
-        - Avionics (Gateway) emits internal events to gateway_events bus
+        - Gateway emits internal events to gateway_events bus
         - WebSocket handler subscribes and broadcasts to frontend
         - Zero coupling between router and WebSocket implementation
     """
@@ -570,7 +570,7 @@ async def send_message(
     grpc_request = _build_grpc_request(user_id, body)
 
     # Look up mode configuration from capability registry (constitutional pattern)
-    # Avionics R3: No Domain Logic - registry lookup instead of hardcoded mode names
+    # Infrastructure R3: No Domain Logic - registry lookup instead of hardcoded mode names
     from jeeves_infra.protocols import get_capability_resource_registry
     mode_registry = get_capability_resource_registry()
     mode_config = mode_registry.get_mode_config(body.mode) if body.mode else None
@@ -700,7 +700,7 @@ REMOVED: /confirmations and /clarifications endpoints
 These endpoints have been replaced by the unified interrupt system:
 - POST /interrupts/{id}/respond
 
-See avionics/gateway/routers/interrupts.py for the unified implementation.
+See mission_system/gateway/routers/interrupts.py for the unified implementation.
 
 Migration path:
 - Old: POST /chat/confirmations with {confirmation_id, response}

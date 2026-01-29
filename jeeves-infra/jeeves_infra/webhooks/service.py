@@ -26,7 +26,7 @@ Usage:
         "status": "success",
     })
 
-Constitutional Reference: Avionics layer (infrastructure)
+Constitutional Reference: Infrastructure layer (infrastructure)
 """
 
 import asyncio

@@ -7,11 +7,6 @@ High-level service for managing session state, providing:
 - Entity reference management
 - Short-term memory coordination with summarization
 
-Unified Interrupt System (v4.0):
-- Clarification and confirmation methods have been REMOVED
-- All interrupt handling now goes through control_tower.services.InterruptService
-- See docs/audits/interrupt_unification_plan.md for migration details
-
 Constitutional Alignment:
 - P1: Uses LLM for context understanding (via SummarizationService)
 - P5: Deterministic spine with clear state transitions
@@ -326,9 +321,5 @@ These methods have been removed as part of the Unified Interrupt System (v4.0):
 - save_critic_decision()
 - get_critic_decisions()
 
-All interrupt-related functionality is now handled by:
-    control_tower.services.InterruptService
-
-Migration: Use InterruptService.create_clarification() and InterruptService.respond()
-instead of the old methods.
+These methods are no longer needed - interrupt handling is done at the kernel level.
 """

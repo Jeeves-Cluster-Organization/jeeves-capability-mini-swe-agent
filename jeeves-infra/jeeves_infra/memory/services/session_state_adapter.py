@@ -1,14 +1,14 @@
-"""Session State Adapter - Bridge Avionics to Core Protocol.
+"""Session State Adapter - Bridge jeeves_infra to Core Protocol.
 
 This adapter implements Core's SessionStateProtocol using the existing
-avionics SessionStateService as the backend. It provides the translation
+jeeves_infra SessionStateService as the backend. It provides the translation
 layer between:
 - Core's WorkingMemory (domain-agnostic)
-- Avionics' SessionState (infrastructure-specific)
+- jeeves_infra' SessionState (infrastructure-specific)
 
 Architectural Pattern:
 - Core defines the protocol (what)
-- Avionics provides the implementation (how)
+- jeeves_infra provides the implementation (how)
 - This adapter bridges them (translation)
 """
 
@@ -36,7 +36,7 @@ class SessionStateAdapter:
     """Adapter implementing Core's SessionStateProtocol.
 
     This bridges the gap between Core's domain-agnostic WorkingMemory
-    and Avionics' infrastructure-specific SessionState.
+    and jeeves_infra' infrastructure-specific SessionState.
 
     Usage:
         adapter = SessionStateAdapter(db, service)
@@ -154,7 +154,7 @@ class SessionStateAdapter:
         """
         result = await self._service.update_focus(
             session_id=session_id,
-            focus_type=self._core_focus_to_avionics(focus.focus_type),
+            focus_type=self._core_focus_to_infra(focus.focus_type),
             focus_id=focus.focus_id,
             focus_context=focus.focus_context
         )
@@ -280,17 +280,17 @@ class SessionStateAdapter:
     # ════════════════════════════════════════════════════════════════════════
 
     def _session_state_to_working_memory(self, state: SessionState) -> WorkingMemory:
-        """Convert Avionics SessionState to Core WorkingMemory.
+        """Convert jeeves_infra SessionState to Core WorkingMemory.
 
         Args:
-            state: Avionics SessionState
+            state: jeeves_infra SessionState
 
         Returns:
             Core WorkingMemory
         """
         # Convert focus
         focus = FocusState(
-            focus_type=self._avionics_focus_to_core(state.focus_type),
+            focus_type=self._infra_focus_to_core(state.focus_type),
             focus_id=state.focus_id,
             focus_label=state.focus_context.get("label") if state.focus_context else None,
             focus_context=state.focus_context or {},
@@ -319,13 +319,13 @@ class SessionStateAdapter:
         )
 
     def _working_memory_to_session_state(self, memory: WorkingMemory) -> SessionState:
-        """Convert Core WorkingMemory to Avionics SessionState.
+        """Convert Core WorkingMemory to jeeves_infra SessionState.
 
         Args:
             memory: Core WorkingMemory
 
         Returns:
-            Avionics SessionState
+            jeeves_infra SessionState
         """
         # Convert entity references
         referenced_entities = []
@@ -346,7 +346,7 @@ class SessionStateAdapter:
         return SessionState(
             session_id=memory.session_id,
             user_id=memory.user_id,
-            focus_type=self._core_focus_to_avionics(memory.focus.focus_type),
+            focus_type=self._core_focus_to_infra(memory.focus.focus_type),
             focus_id=memory.focus.focus_id,
             focus_context=focus_context,
             turn_count=memory.turn_count,
@@ -356,11 +356,11 @@ class SessionStateAdapter:
             updated_at=memory.last_updated,
         )
 
-    def _avionics_focus_to_core(self, focus_type: Optional[str]) -> FocusType:
-        """Convert Avionics focus type string to Core FocusType enum.
+    def _infra_focus_to_core(self, focus_type: Optional[str]) -> FocusType:
+        """Convert jeeves_infra focus type string to Core FocusType enum.
 
         Args:
-            focus_type: Avionics focus type string
+            focus_type: jeeves_infra focus type string
 
         Returns:
             Core FocusType enum
@@ -378,14 +378,14 @@ class SessionStateAdapter:
         # Default to general for unknown types
         return FocusType.GENERAL
 
-    def _core_focus_to_avionics(self, focus_type: FocusType) -> str:
-        """Convert Core FocusType enum to Avionics focus type string.
+    def _core_focus_to_infra(self, focus_type: FocusType) -> str:
+        """Convert Core FocusType enum to jeeves_infra focus type string.
 
         Args:
             focus_type: Core FocusType enum
 
         Returns:
-            Avionics focus type string
+            jeeves_infra focus type string
         """
         mapping = {
             FocusType.GENERAL: "general",

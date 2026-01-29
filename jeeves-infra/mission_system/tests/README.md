@@ -1,6 +1,6 @@
 # Mission System Tests
 
-**Constitutional Layer**: Application Orchestration (depends on Avionics + Core Engine)
+**Constitutional Layer**: Application Orchestration (depends on jeeves_infra)
 
 **Location**: `mission_system/tests/`
 
@@ -44,7 +44,7 @@ tests/
 │   ├── services.py                # Service fixtures
 │   └── mocks/
 │       ├── core_mocks.py
-│       └── avionics_mocks.py
+│       └── infra_mocks.py
 ├── unit/                          # Unit tests
 │   ├── orchestrator/              # Orchestration tests
 │   ├── test_confirmation_manager.py
@@ -283,10 +283,9 @@ async def test_llm_generation(llm_provider):
 **Files**: `contract/test_import_boundaries.py`, `test_app_layer_boundaries.py`, `test_evidence_chain.py`
 
 **What's Tested**:
-- Core engine MUST NOT import from avionics/mission
-- Avionics MUST NOT import from mission system
-- Mission system MUST NOT import from app layer
-- App layer MUST use `mission_system.contracts` (not core_engine directly)
+- jeeves_infra MUST NOT import from mission_system
+- Mission system depends on jeeves_infra only
+- Capabilities (L3) use mission_system contracts
 - Evidence chain integrity (P1 enforcement)
 
 **Example**:
@@ -309,7 +308,7 @@ def test_core_engine_no_mission_imports():
 - WebSocket event manager
 - Node profiles and event context
 
-Note: Rate limiting is handled by `control_tower` - see `control_tower/resources/rate_limiter.py`.
+Note: Rate limiting is handled by the Go kernel - see `jeeves-core/coreengine/`.
 
 **Example**:
 ```python
@@ -601,28 +600,27 @@ async def test_intent_extraction():
 
 - **Constitution**: [../CONSTITUTION.md](../CONSTITUTION.md) - Mission System rules
 - **Test Configuration**: [config/markers.py](config/markers.py) - Marker definitions
-- **Protocols Tests**: [../../protocols/tests/](../../protocols/tests/)
-- **Avionics Tests**: [../../avionics/tests/README.md](../../avionics/tests/README.md)
+- **jeeves_infra Tests**: [../../jeeves_tests/](../../jeeves_tests/) - Infrastructure tests
 - **Capability Layer Tests**: Test documentation in respective capability repositories
 
 ## Dependencies Note
 
-**Foundation Layers**:
-- **L0: protocols** - Protocol definitions, InterruptKind enum, Envelope
-- **L0: shared** - Shared utilities (logging via `get_component_logger`, serialization, UUID)
-- **L1: jeeves-airframe** - Inference platform substrate (backend adapters for HTTP, SSE, retries)
-- **L3: avionics** - Infrastructure orchestration (LLM providers delegate to Airframe)
+**Architecture Layers**:
+- **L0: jeeves-core** - Go kernel (process management, CommBus, scheduling)
+- **L1: jeeves_infra** - Python infrastructure (protocols, LLM providers, memory, database)
+- **L2: mission_system** - Orchestration framework (gateway, services, orchestrator)
+- **L3: Capabilities** - Domain-specific agents (mini-swe-agent, calendar-agent, etc.)
 
-Tests should import from these foundation layers for types and utilities:
+Tests should import from jeeves_infra for types and utilities:
 ```python
-from protocols import Envelope, InterruptKind
-from shared import get_component_logger, parse_datetime
-from jeeves_infra.llm import LLMProvider  # Delegates to Airframe adapters
+from jeeves_infra.protocols import Envelope, InterruptKind, RequestContext
+from jeeves_infra.llm import LLMProvider
+from jeeves_infra.kernel_client import KernelClient
 ```
 
 ---
 
-**Last Updated**: 2025-12-16
+**Last Updated**: 2026-01-29
 **Test Files**: 40
 **Contract Tests**: Fast (< 5s)
 **Unit Tests**: Fast with mocks (< 10s)

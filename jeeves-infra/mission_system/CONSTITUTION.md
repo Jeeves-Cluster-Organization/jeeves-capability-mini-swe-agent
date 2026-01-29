@@ -1,13 +1,12 @@
 # Jeeves Mission System Constitution
 
-**Parent:** [Avionics Constitution](../avionics/CONSTITUTION.md)
-**Updated:** 2026-01-06
+**Updated:** 2026-01-30
 
 ---
 
 ## Overview
 
-This constitution extends the **Jeeves Avionics Constitution** (which extends the Architectural Contracts) and defines the rules for **mission_system**—the framework layer that provides generic orchestration mechanisms for capabilities.
+This constitution defines the rules for **mission_system**—the framework layer that provides generic orchestration mechanisms for capabilities.
 
 **Architecture:**
 - Re-exports centralized types from `core_engine` via `contracts_core.py`
@@ -15,7 +14,7 @@ This constitution extends the **Jeeves Avionics Constitution** (which extends th
 - Capabilities OWN domain-specific configs (not mission_system)
 - No concrete agent classes - agents defined via `AgentConfig` in capability layer
 
-**Dependency:** This component depends on avionics and protocols. Avionics in turn delegates to **jeeves-airframe** for backend protocol handling (L1 substrate). All principles from the architectural contracts apply.
+**Dependency:** This component depends on jeeves_infra and protocols. jeeves_infra delegates to **jeeves-core** (Go kernel) for process management and communication. All principles from the architectural contracts apply.
 
 ---
 
@@ -33,18 +32,18 @@ This constitution extends the **Jeeves Avionics Constitution** (which extends th
 - Concrete agent implementations
 - Domain-specific tools
 
-**Mission System uses avionics:** Depends on avionics for infrastructure (LLM, database, memory). Avionics delegates to jeeves-airframe (L1) for backend protocol implementations.
+**Mission System uses jeeves_infra:** Depends on jeeves_infra for infrastructure (LLM, database, memory). jeeves_infra delegates to jeeves-core (L0) for process management and CommBus.
 
 ---
 
 ## Core Principles (Inherited from Dependency Chain)
 
-From [Avionics Constitution](../avionics/CONSTITUTION.md) and [Architectural Contracts](../docs/CONTRACTS.md):
+From the Architectural Contracts:
 - **Evidence Chain Integrity** — Every claim traces to source code with `[file:line]` citations
 - **Tool Boundary** — Capabilities define their own tools; runtime provides categories
 - **Bounded Retry** — Max retries per step with graceful degradation
 
-**All avionics and architectural contracts apply to this component.**
+**All architectural contracts apply to this component.**
 
 ---
 
@@ -210,7 +209,7 @@ Default values tuned for small-to-medium LLMs (~20K token context). Capabilities
 
 **Override:** Via `ContextBounds` in core config.
 
-**Location:** `avionics/context_bounds.py`
+**Location:** `mission_system/contracts.py`
 
 ---
 
@@ -367,13 +366,13 @@ def get_agent_class(capability_id: str, agent_name: str) -> Type[Agent]: ...
 **Capabilities may:**
 - Implement agents (using core contracts)
 - Provide tools (via registry)
-- Use avionics services (LLM, database, memory)
+- Use jeeves_infra services (LLM, database, memory)
 - Define domain-specific configs
 
 **Capabilities must NOT:**
 - Import from other capabilities
 - Modify core runtime
-- Bypass avionics (which delegates to Airframe for backend implementations)
+- Bypass jeeves_infra (which delegates to jeeves-core for backend implementations)
 
 ---
 
@@ -479,8 +478,8 @@ def test_import_boundaries():
   - `Envelope`, `ProcessingRecord`
   - All protocols (`LLMProviderProtocol`, `ToolProtocol`, etc.)
   - `ContextBounds`, `WorkingMemory`
-- `avionics` — Infrastructure orchestration layer (L3)
-  - LLM providers (delegate to jeeves-airframe for backend protocol)
+- `jeeves_infra` — Infrastructure layer (L1)
+  - LLM providers
   - Memory service and repositories
   - Database clients and connection management
   - Settings and configuration
@@ -504,9 +503,9 @@ def test_import_boundaries():
    - `AgentProfile`, `LLMProfile`, `ThresholdProfile` — Generic agent config types
    - Operational constants (timeouts, retry limits, fuzzy match thresholds)
 
-3. **adapters.py** — Wraps avionics for capabilities
+3. **adapters.py** — Wraps jeeves_infra for capabilities
    - Infrastructure access (LLM, memory, database)
-   - Avionics LLM providers delegate to jeeves-airframe (L1) for backend protocol
+   - LLM providers delegate to jeeves-core (L0) for process management
 
 4. **orchestrator/** — LangGraph pipeline infrastructure
    - Pipeline routing and execution
@@ -529,7 +528,7 @@ Runtime               # Executes pipelines from config
 ContextBounds         # Resource limits
 ```
 
-**Input Types (from avionics):**
+**Input Types (from jeeves_infra):**
 ```python
 LLMProviderProtocol   # LLM interface
 MemoryServiceProtocol # Memory interface
@@ -567,8 +566,8 @@ PerceptionOutput, IntentOutput, PlanOutput, etc.
 
 **Boundary rules:**
 - Apps MUST import from `mission_system.contracts` (not `core_engine`)
-- Apps MUST use `mission_system.adapters` (not `avionics` directly)
-- Mission system MAY import from core and avionics
+- Apps MUST use `mission_system.adapters` (not `jeeves_infra` directly)
+- Mission system MAY import from core and jeeves_infra
 - Core MUST NOT import from mission system
 
 ---
@@ -665,20 +664,20 @@ Mission System                    ← OWNS generic config types (AgentProfile, e
 
 **May import:**
 - `protocols` — Runtime contracts and protocols
-- `avionics` — Infrastructure orchestration (delegates to jeeves-airframe for backends)
+- `jeeves_infra` — Infrastructure layer (L1)
 - External libraries (langgraph, fastapi, etc.)
 
 **Must NOT import:**
 - Nothing (top of dependency chain)
 
-**Note:** Avionics depends on `jeeves-airframe` for backend protocol implementations (HTTP, SSE, retries). Mission system accesses these through avionics providers.
+**Note:** jeeves_infra depends on `jeeves-core` for process management and CommBus. Mission system accesses these through jeeves_infra providers.
 
 **Example:**
 ```python
 # ALLOWED
 from protocols import Envelope
-from jeeves_infra.llm import LLMProvider  # Delegates to Airframe adapters
-from avionics.memory import MemoryService
+from jeeves_infra.llm import LLMProvider
+from jeeves_infra.memory import MemoryService
 
 # All imports are allowed at mission system level
 ```
@@ -745,4 +744,4 @@ Each agent has **one job**:
 
 ---
 
-*This constitution extends the [Avionics Constitution](../avionics/CONSTITUTION.md) and inherits all principles from the dependency chain (Protocols → Avionics → Mission System).*
+*This constitution inherits all principles from the dependency chain (Protocols → jeeves_infra → Mission System).*

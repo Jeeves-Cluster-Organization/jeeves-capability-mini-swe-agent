@@ -98,10 +98,10 @@ async def test_readiness_check_database_missing_schema(postgres_container):
     detection of missing schema. Uses the session-scoped postgres_container
     to create a temporary database.
 
-    Import Boundary Note: Mission system tests can access avionics
+    Import Boundary Note: Mission system tests can access jeeves_infra
     directly for database infrastructure (mission_system IS the wiring layer).
     """
-    # Mission system is the wiring layer - avionics imports acceptable
+    # Mission system is the wiring layer - jeeves_infra imports acceptable
     from jeeves_infra.postgres.client import PostgreSQLClient
     import urllib.parse
     import uuid
