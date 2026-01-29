@@ -15,7 +15,7 @@ from contextlib import asynccontextmanager
 import asyncio
 
 from jeeves_infra.memory.repositories.trace_repository import TraceRepository, AgentTrace
-from shared import get_component_logger
+from jeeves_infra.logging import get_component_logger
 from jeeves_infra.protocols import LoggerProtocol, FeatureFlagsProtocol
 
 
@@ -27,7 +27,7 @@ class TraceRecorder:
     Per Memory Contract L2: Agent decisions have a traceable cause chain.
 
     Constitutional Reference:
-        - Memory Module: FORBIDDEN memory_module → avionics.*
+        - Memory Module: FORBIDDEN jeeves_infra.memory → avionics.*
         - Use protocol injection instead of direct imports
     """
 

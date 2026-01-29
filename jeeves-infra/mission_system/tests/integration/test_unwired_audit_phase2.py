@@ -830,7 +830,7 @@ class TestWorkerCoordinatorIntegration:
         """Test that submit_envelope creates PCB in Control Tower."""
         from mission_system.services.worker_coordinator import WorkerCoordinator
         from jeeves_infra.protocols import Envelope
-from jeeves_infra.protocols import RequestContext
+        from jeeves_infra.protocols import RequestContext
 
         coordinator = WorkerCoordinator(
             distributed_bus=mock_distributed_bus,
@@ -872,7 +872,7 @@ from jeeves_infra.protocols import RequestContext
         """Test that submit_envelope allocates resources."""
         from mission_system.services.worker_coordinator import WorkerCoordinator
         from jeeves_infra.protocols import Envelope
-from jeeves_infra.protocols import RequestContext
+        from jeeves_infra.protocols import RequestContext
         from control_tower.types import ResourceQuota
 
         coordinator = WorkerCoordinator(

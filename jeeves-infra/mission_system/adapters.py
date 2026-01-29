@@ -107,8 +107,8 @@ class MissionSystemAdapters:
             MemoryService instance
         """
         if not self._memory_service:
-            # MemoryService was moved to MemoryManager in memory_module
-            from memory_module.manager import MemoryManager
+            # MemoryService was moved to MemoryManager in jeeves_infra.memory
+            from jeeves_infra.memory.manager import MemoryManager
             # MemoryManager needs additional dependencies - return None for now
             # Capabilities should inject proper memory service
             raise NotImplementedError(
@@ -294,7 +294,7 @@ def create_graph_storage(persistence: PersistenceProtocol) -> Any:
     Create L5 graph storage for entity relationships.
 
     Uses PostgresGraphAdapter from avionics for production.
-    For testing, use InMemoryGraphStorage from memory_module.
+    For testing, use InMemoryGraphStorage from jeeves_infra.memory.
 
     Args:
         persistence: Database client
@@ -429,7 +429,7 @@ async def create_vector_adapter(
     Creates a new adapter instance - does not cache. Caller owns the lifecycle.
 
     Moved from avionics.database.factory to respect layer boundaries
-    (mission_system can import from memory_module, avionics cannot).
+    (mission_system can import from jeeves_infra.memory, avionics cannot).
 
     Args:
         settings: Application settings (uses global if None)

@@ -27,6 +27,8 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
+from contextvars import ContextVar
+
 from jeeves_infra.context import AppContext, SystemClock
 from jeeves_infra.logging import configure_logging
 from jeeves_infra.settings import Settings, get_settings
@@ -48,6 +50,42 @@ if TYPE_CHECKING:
         ConfigRegistryProtocol,
     )
 
+
+# =============================================================================
+# Per-Request PID Context for Resource Tracking
+# =============================================================================
+
+# ContextVar to track the current request's Process ID (PID)
+# Used by LLM gateway to associate resource usage with kernel processes
+request_pid_context: ContextVar[Optional[str]] = ContextVar("request_pid", default=None)
+
+
+def set_request_pid(pid: str) -> None:
+    """Set the current request's Process ID.
+
+    Args:
+        pid: The kernel process ID for the current request
+    """
+    request_pid_context.set(pid)
+
+
+def get_request_pid() -> Optional[str]:
+    """Get the current request's Process ID.
+
+    Returns:
+        The PID if set, None otherwise
+    """
+    return request_pid_context.get()
+
+
+def clear_request_pid() -> None:
+    """Clear the current request's Process ID."""
+    request_pid_context.set(None)
+
+
+# =============================================================================
+# Resource Configuration
+# =============================================================================
 
 @dataclass
 class ResourceQuota:
@@ -573,7 +611,7 @@ async def create_memory_manager(
         return None
 
     try:
-        from memory_module.manager import MemoryManager
+        from jeeves_infra.memory.manager import MemoryManager
         from jeeves_infra.memory.sql_adapter import SQLAdapter
         from jeeves_infra.memory.services.xref_manager import CrossRefManager
         from jeeves_infra.logging import create_logger

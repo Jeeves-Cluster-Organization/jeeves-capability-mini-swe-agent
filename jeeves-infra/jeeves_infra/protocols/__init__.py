@@ -108,6 +108,35 @@ from jeeves_infra.protocols.engine_pb2_grpc import (
 )
 
 # =============================================================================
+# RUNTIME TYPES (Agent, PipelineRunner, etc.)
+# =============================================================================
+
+from jeeves_infra.runtime.agents import (
+    Agent,
+    PipelineRunner,
+    create_pipeline_runner,
+    create_envelope,
+    OptionalCheckpoint,
+)
+
+# =============================================================================
+# UTILITY TYPES
+# =============================================================================
+
+from jeeves_infra.utils.json_repair import JSONRepairKit
+from jeeves_infra.utils.strings import normalize_string_list
+
+# =============================================================================
+# WORKING MEMORY TYPES
+# =============================================================================
+
+from jeeves_infra.protocols.working_memory import (
+    Finding,
+    WorkingMemory,
+    WorkingMemoryProtocol,
+)
+
+# =============================================================================
 # CAPABILITY REGISTRATION (moved from jeeves-core/protocols)
 # =============================================================================
 
@@ -129,6 +158,19 @@ from jeeves_infra.protocols.capability import (
 )
 
 __all__ = [
+    # Runtime types
+    "Agent",
+    "PipelineRunner",
+    "create_pipeline_runner",
+    "create_envelope",
+    "OptionalCheckpoint",
+    # Utility types
+    "JSONRepairKit",
+    "normalize_string_list",
+    # Working memory types
+    "Finding",
+    "WorkingMemory",
+    "WorkingMemoryProtocol",
     # Enums
     "TerminalReason",
     "InterruptKind",

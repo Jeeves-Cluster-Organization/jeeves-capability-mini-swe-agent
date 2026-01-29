@@ -22,7 +22,7 @@ from typing import Any, Dict, Optional
 
 # jeeves-core is now a proper package - no sys.path manipulation needed
 
-from protocols.capability import CapabilityToolCatalog
+from jeeves_infra.protocols import CapabilityToolCatalog
 from jeeves_infra.protocols import RiskLevel, ToolCategory
 
 # =============================================================================

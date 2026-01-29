@@ -13,7 +13,8 @@ from datetime import datetime, timezone
 from uuid import uuid4
 import json
 
-from shared import get_component_logger, parse_datetime
+from jeeves_infra.logging import get_component_logger
+from jeeves_infra.utils.datetime import parse_datetime
 from jeeves_infra.protocols import LoggerProtocol, DatabaseClientProtocol
 
 

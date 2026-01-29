@@ -8,7 +8,7 @@ Uses a pretrained cross-encoder NLI model for zero-shot entailment checking.
 No training data required - works out of the box.
 
 Usage:
-    from memory_module.services.nli_service import NLIService
+    from jeeves_infra.memory.services.nli_service import NLIService
 
     nli = NLIService()
     result = nli.verify_claim(
@@ -21,7 +21,7 @@ Usage:
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
-from shared import get_component_logger
+from jeeves_infra.logging import get_component_logger
 from jeeves_infra.protocols import LoggerProtocol
 
 

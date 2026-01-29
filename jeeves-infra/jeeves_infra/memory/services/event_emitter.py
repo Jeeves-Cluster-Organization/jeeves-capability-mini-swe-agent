@@ -21,7 +21,7 @@ import hashlib
 import json
 
 from jeeves_infra.memory.repositories.event_repository import EventRepository, DomainEvent
-from shared import get_component_logger
+from jeeves_infra.logging import get_component_logger
 from jeeves_infra.protocols import LoggerProtocol, FeatureFlagsProtocol
 
 if TYPE_CHECKING:
@@ -193,7 +193,7 @@ class EventEmitter:
     during retries within the same session.
 
     Constitutional Reference:
-        - Memory Module: FORBIDDEN memory_module → avionics.*
+        - Memory Module: FORBIDDEN jeeves_infra.memory → avionics.*
         - Use protocol injection instead of direct imports
     """
 
@@ -372,14 +372,14 @@ class EventEmitter:
     ) -> None:
         """Publish event to CommBus for observability.
 
-        Uses the typed message classes from memory_module.messages.
+        Uses the typed message classes from jeeves_infra.memory.messages.
         Non-blocking - errors are logged but don't fail the main operation.
         """
         if self.commbus is None:
             return
 
         try:
-            from memory_module.messages import MemoryStored
+            from jeeves_infra.memory.messages import MemoryStored
 
             # Create typed CommBus event
             commbus_event = MemoryStored(
@@ -799,7 +799,7 @@ class EventEmitter:
 
     # ============================================================
     # Memory Event Factories (CommBus integration)
-    # Emits events defined in memory_module/messages/events.py
+    # Emits events defined in jeeves_infra/memory/messages/events.py
     # ============================================================
 
     async def emit_memory_stored(

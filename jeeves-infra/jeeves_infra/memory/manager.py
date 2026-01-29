@@ -12,7 +12,7 @@ Code Analysis Agent v3.0:
 - Task and Journal types removed (Constitution v3.0)
 
 Memory Module Audit (2025-12-09):
-- Moved from avionics/memory/manager.py to memory_module/
+- Moved from avionics/memory/manager.py to jeeves_infra/memory/
 - Uses MemoryItem from jeeves_core_engine.memory (removed duplicate)
 """
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from jeeves_infra.memory.sql_adapter import SQLAdapter
     from jeeves_infra.memory.services.xref_manager import CrossRefManager
 import asyncio
-from shared import get_component_logger
+from jeeves_infra.logging import get_component_logger
 from jeeves_infra.protocols import LoggerProtocol, VectorStorageProtocol
 
 

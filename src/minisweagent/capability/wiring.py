@@ -30,7 +30,7 @@ from typing import Any, Optional, TYPE_CHECKING
 # jeeves-core is now a proper package - install with: pip install -e ./jeeves-core
 # No sys.path manipulation needed
 
-from protocols.capability import (
+from jeeves_infra.protocols import (
     get_capability_resource_registry,
     DomainModeConfig,
     DomainServiceConfig,
@@ -41,7 +41,7 @@ from protocols.capability import (
 from jeeves_infra.protocols import AgentLLMConfig
 
 if TYPE_CHECKING:
-    from protocols.capability import CapabilityResourceRegistry
+    from jeeves_infra.protocols import CapabilityResourceRegistry
     from jeeves_infra.kernel_client import KernelClient
 
 logger = logging.getLogger(__name__)

@@ -29,7 +29,7 @@ from jeeves_infra.gateway.websocket_manager import WebSocketEventManager
 from mission_system.events.bridge import EventBridge
 from mission_system.bootstrap import create_app_context, core_config_to_resource_quota
 from jeeves_infra.wiring import create_llm_provider_factory, create_tool_executor
-from mission_system.api.health import HealthChecker, health_check_to_dict
+from jeeves_infra.gateway.health import HealthChecker, health_check_to_dict
 from jeeves_infra.settings import settings, get_settings
 from jeeves_infra.database.client import DatabaseClientProtocol
 from jeeves_infra.database.factory import create_database_client, reset_factory
@@ -437,7 +437,7 @@ except RuntimeError:
 
 # Mount Chat router if feature flag enabled
 if settings.chat_enabled:
-    from mission_system.api.chat import router as chat_router, get_chat_service
+    from jeeves_infra.gateway.chat import router as chat_router, get_chat_service
 
     # Override dependency to use app_state.chat_service
     app.dependency_overrides[get_chat_service] = lambda: get_app_state().chat_service
@@ -457,7 +457,7 @@ if settings.chat_enabled:
 
 # Mount Governance router (L7 System Introspection)
 # Always enabled - governance is a core feature for observability (P6)
-from mission_system.api.governance import router as governance_router, get_tool_health_service
+from jeeves_infra.gateway.governance import router as governance_router, get_tool_health_service
 
 # Override dependency to use app_state.tool_health_service
 app.dependency_overrides[get_tool_health_service] = lambda: get_app_state().tool_health_service

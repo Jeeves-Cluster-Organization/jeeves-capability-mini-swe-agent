@@ -22,7 +22,7 @@ from jeeves_infra.memory.repositories.tool_metrics_repository import (
     ToolMetricsRepository,
     ToolMetric
 )
-from shared import get_component_logger
+from jeeves_infra.logging import get_component_logger
 from jeeves_infra.protocols import LoggerProtocol
 
 

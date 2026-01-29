@@ -154,7 +154,7 @@ class InMemoryStateBackend(StateBackend):
         self,
         text_hash: str
     ) -> Optional[List[float]]:
-        """Get cached embedding from memory_module."""
+        """Get cached embedding from jeeves_infra.memory."""
         import time
 
         if text_hash in self.embedding_cache:

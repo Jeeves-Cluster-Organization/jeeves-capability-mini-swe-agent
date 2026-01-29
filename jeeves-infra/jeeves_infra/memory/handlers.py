@@ -7,7 +7,7 @@ Constitutional Reference:
 - Control Tower CONSTITUTION: CommBus communication for service dispatch
 
 Usage:
-    from memory_module.handlers import register_memory_handlers
+    from jeeves_infra.memory.handlers import register_memory_handlers
 
     # In application startup
     register_memory_handlers(
@@ -53,7 +53,7 @@ def register_memory_handlers(
     Note:
         Either session_state_service or db must be provided for full functionality.
     """
-    from memory_module.messages import (
+    from jeeves_infra.memory.messages import (
         GetSessionState,
         SearchMemory,
         GetClarificationContext,

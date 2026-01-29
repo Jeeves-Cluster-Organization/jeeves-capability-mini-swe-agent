@@ -83,7 +83,8 @@ class TestAppContextCreation:
             assert context.feature_flags is not None
             assert context.logger is not None
             assert context.clock is not None
-            assert context.control_tower is not None
+            # control_tower is optional (requires Go kernel)
+            # It will be None unless kernel_client is provided
 
     def test_respects_injected_dependencies(self):
         """Test that injected dependencies are used."""

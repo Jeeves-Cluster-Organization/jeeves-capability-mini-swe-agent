@@ -8,9 +8,9 @@ Provides:
 - LRU cache for performance
 
 Note: This module requires sentence-transformers (1.5GB+ ML dependency).
-      It is NOT eagerly imported by memory_module.services.
+      It is NOT eagerly imported by jeeves_infra.memory.services.
       Import directly when needed:
-          from memory_module.services.embedding_service import EmbeddingService
+          from jeeves_infra.memory.services.embedding_service import EmbeddingService
 """
 
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
@@ -18,7 +18,7 @@ import hashlib
 import numpy as np
 from functools import lru_cache
 
-from shared import get_component_logger
+from jeeves_infra.logging import get_component_logger
 from jeeves_infra.protocols import LoggerProtocol
 
 if TYPE_CHECKING:

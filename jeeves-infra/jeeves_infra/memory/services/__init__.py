@@ -28,14 +28,13 @@ from jeeves_infra.memory.services.xref_manager import CrossRefManager
 from jeeves_infra.memory.services.event_emitter import EventEmitter
 from jeeves_infra.memory.services.trace_recorder import TraceRecorder
 from jeeves_infra.memory.services.session_state_service import SessionStateService
-from jeeves_infra.memory.services.session_state_adapter import SessionStateAdapter
+# SessionStateAdapter removed - depends on capability-specific types not in jeeves_infra
 from jeeves_infra.memory.services.chunk_service import ChunkService
 from jeeves_infra.memory.services.tool_health_service import ToolHealthService
 from jeeves_infra.memory.services.code_indexer import CodeIndexer
 
 __all__ = [
-    # Protocol Adapters (implements Core protocols)
-    "SessionStateAdapter",
+    # Protocol Adapters removed - SessionStateAdapter depends on capability-specific types
     # Infrastructure Services (EmbeddingService is lazy - import directly when needed)
     "NLIService",
     "get_nli_service",
