@@ -1,258 +1,200 @@
-<div align="center">
+# Mini SWE Agent
 
-# jeeves-capability-mini-swe-agent
+A minimal AI agent for software engineering tasks, enhanced with the Jeeves micro-kernel architecture.
 
-**A fork of [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) with jeeves-core agentic kernel integration**
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![SWE-bench](https://img.shields.io/badge/SWE--bench-74%25+-brightgreen)](https://swebench.com)
 
-**v2.0** — Now with session persistence, semantic search, and tool health monitoring
+## Overview
 
-</div>
+Mini SWE Agent is a **capability layer** that provides software engineering automation built on top of the Jeeves micro-kernel architecture. It can:
 
-> [!NOTE]
-> This is a **fork** of the excellent [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) by the Princeton & Stanford team.
-> This fork integrates [jeeves-core](https://github.com/Jeeves-Cluster-Organization/jeeves-core) for enhanced orchestration capabilities.
+- Fix bugs and implement features in codebases
+- Navigate and understand code structure
+- Execute shell commands safely
+- Run tests and verify changes
 
-## What This Fork Adds
-
-This fork extends mini-swe-agent with **jeeves-core agentic kernel** for:
-
-- **Parallel Pipeline Execution**: Multi-stage pipelines with fan-out/fan-in patterns
-- **Local LLM Support**: Native support for llama-server, Ollama, and OpenAI-compatible servers
-- **Session Persistence**: Four-layer memory with PostgreSQL-backed state
-- **Semantic Code Search**: Conceptual queries with pgvector embeddings
-- **Dependency Graph**: AST-based entity extraction and relationship queries
-- **Event Streaming**: Real-time visibility into agent progress
-- **Resource Quotas**: Defense-in-depth bounds enforcement
-- **Tool Health Monitoring**: Automatic quarantine of failing tools with metrics
-- **Prometheus Metrics**: Full observability stack integration
-
-## About the Original mini-swe-agent
-
-The original [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) is a minimal 100-line AI agent:
-
-- **Minimal**: Just 100 lines of python
-- **Performant**: Scores >74% on SWE-bench verified benchmark
-- **Deployable**: Supports docker, podman, singularity, apptainer, and more
-- **Built by**: Princeton & Stanford team behind [SWE-bench](https://swebench.com) and [SWE-agent](https://swe-agent.com)
+This is a fork of the excellent [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) by Princeton & Stanford, extended with the Jeeves orchestration system.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  mini-swe-agent (L5 - Capability Layer)                     │
-│  - Domain-specific agents (SWE tasks)                       │
-│  - Domain-specific tools (bash_execute, file ops)           │
-│  - Pipeline configurations                                  │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  mini-swe-agent (Capability Layer)  ← THIS PACKAGE              │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ Orchestrator │  │    Tools     │  │   Prompts    │          │
+│  │  (Pipelines) │  │  (Catalog)   │  │  (Registry)  │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+└─────────────────────────────────────────────────────────────────┘
                               │ imports
                               ↓
-┌─────────────────────────────────────────────────────────────┐
-│  jeeves-core (L0-L4 - Runtime Layers)                       │
-│  - PipelineRunner (orchestration)                           │
-│  - LLM providers (OpenAI, Anthropic, llama-server)          │
-│  - Control Tower (lifecycle, quotas)                        │
-│  - Memory services (L1-L4)                                  │
-└─────────────────────────────────────────────────────────────┘
-                              │ connects
+┌─────────────────────────────────────────────────────────────────┐
+│  jeeves-infra (Infrastructure Layer)                            │
+│  LLM providers, database clients, runtime                       │
+└─────────────────────────────────────────────────────────────────┘
+                              │ gRPC
                               ↓
-┌─────────────────────────────────────────────────────────────┐
-│  PostgreSQL 15+ with pgvector                               │
-│  - Working memory (L4 session state)                        │
-│  - Tool health metrics (L7 monitoring)                      │
-│  - Semantic embeddings (L3 code search)                     │
-│  - Entity graph (L5 dependencies)                           │
-│  - Event log (L2 checkpointing)                             │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  jeeves-core (Micro-Kernel - Go)                                │
+│  Pipeline orchestration, bounds checking, state management      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
 
-### Quick Start
-
-Clone with submodule:
-
 ```bash
-git clone --recursive https://github.com/Jeeves-Cluster-Organization/jeeves-capability-mini-swe-agent.git
-cd jeeves-capability-mini-swe-agent
+# Clone with submodules
+git clone --recursive https://github.com/Jeeves-Cluster-Organization/mini-swe-agent.git
+cd mini-swe-agent
+
+# Install with dependencies
 pip install -e ".[dev]"
 ```
 
-### Database Setup (for v2.0 features)
+## Quick Start
+
+### Basic Usage
 
 ```bash
-# Set database URL
-export MSWEA_DATABASE_URL="postgresql://user:pass@localhost/mswea"
+# Run with a task
+mini-jeeves run -t "Fix the bug in auth.py"
 
-# Run migrations
-mini-jeeves db migrate
+# With local LLM (Ollama, llama-server)
+mini-jeeves run -t "Fix the bug" --llm-url http://localhost:11434/v1 --llm-model qwen2.5:7b
 
-# Check status
-mini-jeeves db status
+# Skip confirmations (YOLO mode)
+mini-jeeves run -t "Fix the bug" --yolo
 ```
 
-## Usage
-
-Use `mini-jeeves` (or the aliases `mini` / `mini-swe-agent`) for v2.0 features:
+### Pipeline Modes
 
 ```bash
-# Basic run
-mini-jeeves run -t "Fix the bug"
+# Unified mode (default) - single agent loop
+mini-jeeves run -t "Fix the bug" --pipeline unified
 
-# Parallel pipeline mode (multi-stage with parallel analysis)
-mini-jeeves run -t "Fix the bug" --mode parallel
+# Sequential CoT - 4-stage pipeline (Understand → Plan → Execute → Synthesize)
+mini-jeeves run -t "Fix the bug" --pipeline sequential
 
-# With local LLM
-mini-jeeves run -t "Fix the bug" --llm-url http://localhost:8080/v1
+# Parallel mode - multi-stage with parallel analysis
+mini-jeeves run -t "Fix the bug" --pipeline parallel
+```
 
-# With session persistence
+### Session Persistence
+
+```bash
+# Start new session
 mini-jeeves run -t "Fix the bug" --new-session
-mini-jeeves run -t "Continue fixing" --session session_20260127_123456
 
-# With metrics enabled
-mini-jeeves run -t "Fix the bug" --enable-metrics --metrics-port 9090
+# Resume session
+mini-jeeves run -t "Continue fixing" --session session_20260130_123456
 
-# Resume from checkpoint
-mini-jeeves run --resume <checkpoint_id>
-```
-
-### Session Management
-
-```bash
-# List all sessions
-mini-jeeves list-sessions [--limit 20]
-
-# Delete a session
-mini-jeeves session-delete <session_id>
-```
-
-### Code Indexing & Semantic Search
-
-```bash
-# Index your codebase for semantic search
-mini-jeeves index . --pattern "**/*.py" [--chunk-size 512]
-
-# Search conceptually
-mini-jeeves search "authentication logic" [--limit 5]
-```
-
-### Dependency Graph
-
-```bash
-# Build dependency graph from AST
-mini-jeeves graph-build .
-
-# Query dependencies
-mini-jeeves graph-deps src/auth.py --direction depends_on
-mini-jeeves graph-deps src/auth.py --direction used_by
-```
-
-### Tool Health Monitoring
-
-```bash
-# View tool health status
-mini-jeeves tool-health
-
-# Reset a quarantined tool
-mini-jeeves tool-reset <tool_name>
+# List sessions
+mini-jeeves list-sessions
 ```
 
 ## Pipeline Modes
 
-**Single-Agent Mode** (default): Single agent loop, matches original behavior.
+### Unified (Default)
+
+Single agent loop that mimics the original mini-swe-agent behavior:
 
 ```
-[User Task] → [SWE Agent (loop)] → [Result]
+[Task] → [SWE Agent (loop)] → [Result]
 ```
 
-**Parallel Pipeline Mode**: Multi-stage pipeline with parallel analysis:
+### Sequential Chain-of-Thought
+
+4-stage pipeline with **3 LLM calls** (Execute stage is deterministic):
 
 ```
-                    ┌─> [code_searcher] ──┐
-[task_parser] ─────>├─> [file_analyzer] ──├──> [planner] ──> [executor] ──> [verifier]
-                    └─> [test_discovery]─┘
+[Understand] → [Plan] → [Execute] → [Synthesize]
+   (LLM)        (LLM)    (tools)      (LLM)
 ```
 
-**Benefits:**
-- 3x faster on multi-file tasks
-- Different LLM models per stage (big for planning, small for execution)
-- Streaming stage outputs for real-time visibility
-- Automatic retry with loop-back on verification failure
+### Parallel
 
-## Tool Catalog
+Multi-stage pipeline with parallel analysis:
 
-| Tool | Risk Level | Description |
-|------|------------|-------------|
-| `bash_execute` | HIGH | Execute bash commands |
-| `read_file` | READ_ONLY | Read file contents |
-| `write_file` | WRITE | Write content to file |
-| `edit_file` | WRITE | Replace text in file |
-| `find_files` | READ_ONLY | Find files by pattern |
-| `grep_search` | READ_ONLY | Search for pattern |
-| `run_tests` | MEDIUM | Run project tests |
-| `semantic_search` | READ_ONLY | L3 semantic code search |
-| `graph_query` | READ_ONLY | L5 dependency queries |
+```
+              ┌─> [code_searcher] ──┐
+[task_parser] ├─> [file_analyzer] ──├─> [planner] → [executor] → [verifier]
+              └─> [test_discovery]─┘
+```
+
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `bash_execute` | Execute shell commands |
+| `read_file` | Read file contents |
+| `write_file` | Write content to file |
+| `edit_file` | Edit file with search/replace |
+| `find_files` | Find files by pattern |
+| `grep_search` | Search for patterns in files |
+| `run_tests` | Run project test suite |
+| `semantic_search` | Conceptual code search (requires database) |
+| `graph_query` | Dependency graph queries (requires database) |
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# LLM Provider
+export JEEVES_LLM_ADAPTER="openai_http"
+export JEEVES_LLM_BASE_URL="http://localhost:11434/v1"
+export JEEVES_LLM_MODEL="qwen2.5:7b"
+
+# Database (optional, for v2.0 features)
+export MSWEA_DATABASE_URL="postgresql://user:pass@localhost/mswea"
+
+# Go Kernel
+export KERNEL_GRPC_ADDRESS="localhost:50051"
+```
+
+### YAML Configuration
+
+See [mini.yaml](src/minisweagent/config/mini.yaml) for full configuration options.
 
 ## Python API
 
 ```python
 import asyncio
 from minisweagent.capability import register_capability
-from minisweagent.capability.orchestrator import create_swe_orchestrator, OrchestratorMode
+from minisweagent.capability.orchestrator import create_swe_orchestrator
 
-# Register capability at startup
+# Register capability
 register_capability()
 
 # Create orchestrator
 orchestrator = create_swe_orchestrator(
-    mode=OrchestratorMode.PARALLEL_PIPELINE,
+    pipeline_mode="sequential",
     cost_limit=5.0,
 )
 
 # Run task
 async def main():
-    result = await orchestrator.run("Fix the authentication bug in auth.py")
+    result = await orchestrator.run("Fix the authentication bug")
     print(result)
 
 asyncio.run(main())
 ```
 
-## Models
+## Related Projects
 
-We recommend:
-- `anthropic/claude-sonnet-4-5-20250929` for most tasks
-- `openai/gpt-5` or `openai/gpt-5-mini` for OpenAI
-
-Check scores at the [SWE-bench (bash-only)](https://swebench.com) leaderboard.
-
-## Environment Variables
-
-```bash
-# Database
-export MSWEA_DATABASE_URL="postgresql://user:pass@localhost/mswea"
-
-# LLM Provider
-export JEEVES_LLM_ADAPTER=openai_http  # or litellm
-export JEEVES_LLM_BASE_URL=http://localhost:8080/v1
-export JEEVES_LLM_MODEL=qwen2.5-7b-instruct
-
-# Tool Configuration
-export MSWEA_TOOL_TIMEOUT=30
-export MSWEA_WORKING_DIR=/path/to/repo
-```
-
-## Documentation
-
-- [Quick Start](docs/quickstart.md)
-- [Jeeves Integration Guide](docs/jeeves_integration.md)
-- [v2.0 Implementation Status](docs/v2-implementation-final-status.md)
-- [FAQ](docs/faq.md)
-- [Original mini-swe-agent docs](https://mini-swe-agent.com/latest/)
+- [jeeves-core](https://github.com/Jeeves-Cluster-Organization/jeeves-core) - Go micro-kernel
+- [jeeves-infra](https://github.com/Jeeves-Cluster-Organization/jeeves-infra) - Python infrastructure layer
+- [Original mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) - Upstream project
+- [SWE-agent](https://github.com/SWE-agent/SWE-agent) - Full-featured SWE agent
+- [SWE-bench](https://github.com/SWE-bench/SWE-bench) - Software engineering benchmark
 
 ## Attribution
 
 This project is a fork of [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) by the Princeton & Stanford team.
 
-If you use this work, please cite the original [SWE-agent paper](https://arxiv.org/abs/2405.15793):
+If you use this work, please cite the original SWE-agent paper:
 
 ```bibtex
 @inproceedings{yang2024sweagent,
@@ -264,9 +206,41 @@ If you use this work, please cite the original [SWE-agent paper](https://arxiv.o
 }
 ```
 
-## Related Projects
+## Contributing
 
-- [mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent) - The original minimal SWE agent (upstream)
-- [jeeves-core](https://github.com/Jeeves-Cluster-Organization/jeeves-core) - Agentic kernel for orchestration
-- [SWE-agent](https://github.com/SWE-agent/SWE-agent) - Full-featured SWE agent
-- [SWE-bench](https://github.com/SWE-bench/SWE-bench) - Software engineering benchmark
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+```
+MIT License
+
+Copyright (c) 2024 Princeton NLP Group (original mini-swe-agent)
+Copyright (c) 2024 Jeeves Cluster Organization (Jeeves integration)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
