@@ -723,3 +723,451 @@ class TestPcbToInfo:
             pcb = make_pcb(priority=proto_priority)
             info = mock_kernel_client._pcb_to_info(pcb)
             assert info.priority == expected_str, f"Expected {expected_str}, got {info.priority}"
+
+
+class TestAuthContext:
+    """Tests for authentication context management."""
+
+    def test_set_context(self, mock_kernel_client):
+        """Test set_context stores values and returns self."""
+        result = mock_kernel_client.set_context(
+            user_id="user-1",
+            session_id="session-1",
+            request_id="request-1",
+        )
+
+        assert result is mock_kernel_client  # Returns self for chaining
+        assert mock_kernel_client._default_user_id == "user-1"
+        assert mock_kernel_client._default_session_id == "session-1"
+        assert mock_kernel_client._default_request_id == "request-1"
+
+    def test_set_context_chaining(self, mock_kernel_client):
+        """Test set_context allows method chaining."""
+        mock_kernel_client.set_context(user_id="u1").set_context(session_id="s1")
+
+        assert mock_kernel_client._default_user_id == ""  # Overwritten
+        assert mock_kernel_client._default_session_id == "s1"
+
+    def test_get_metadata_empty(self, mock_kernel_client):
+        """Test _get_metadata returns empty list when no context set."""
+        metadata = mock_kernel_client._get_metadata()
+        assert metadata == []
+
+    def test_get_metadata_full(self, mock_kernel_client):
+        """Test _get_metadata returns all set values."""
+        mock_kernel_client.set_context(
+            user_id="user-1",
+            session_id="session-1",
+            request_id="request-1",
+        )
+
+        metadata = mock_kernel_client._get_metadata()
+
+        assert ("user_id", "user-1") in metadata
+        assert ("session_id", "session-1") in metadata
+        assert ("request_id", "request-1") in metadata
+
+    def test_get_metadata_partial(self, mock_kernel_client):
+        """Test _get_metadata only includes set values."""
+        mock_kernel_client.set_context(user_id="user-1", session_id="session-1")
+
+        metadata = mock_kernel_client._get_metadata()
+
+        assert ("user_id", "user-1") in metadata
+        assert ("session_id", "session-1") in metadata
+        assert len(metadata) == 2  # No request_id
+
+    @pytest.mark.asyncio
+    async def test_create_process_stores_context(self, mock_kernel_client, mock_kernel_stub):
+        """Test create_process auto-stores context."""
+        mock_kernel_stub.CreateProcess.return_value = make_pcb(
+            pid="proc-1",
+            user_id="user-1",
+            session_id="sess-1",
+        )
+
+        await mock_kernel_client.create_process(
+            pid="proc-1",
+            user_id="user-1",
+            session_id="sess-1",
+            request_id="req-1",
+        )
+
+        assert mock_kernel_client._default_user_id == "user-1"
+        assert mock_kernel_client._default_session_id == "sess-1"
+        assert mock_kernel_client._default_request_id == "req-1"
+
+
+class TestCommBusClient:
+    """Tests for CommBusClient."""
+
+    @pytest.fixture
+    def mock_commbus_stub(self):
+        """Mock CommBusServiceStub."""
+        stub = MagicMock()
+        stub.Publish = AsyncMock()
+        stub.Send = AsyncMock()
+        stub.Query = AsyncMock()
+        return stub
+
+    @pytest.fixture
+    def commbus_client(self, mock_grpc_channel, mock_commbus_stub):
+        """CommBusClient with mocked stub."""
+        from jeeves_infra.kernel_client import CommBusClient
+        client = CommBusClient(mock_grpc_channel)
+        client._stub = mock_commbus_stub
+        return client
+
+    @pytest.mark.asyncio
+    async def test_publish_success(self, commbus_client, mock_commbus_stub):
+        """Test publish returns True on success."""
+        mock_commbus_stub.Publish.return_value = MagicMock(success=True)
+
+        result = await commbus_client.publish("AgentStarted", {"name": "planner"})
+
+        assert result is True
+        mock_commbus_stub.Publish.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_publish_failure(self, commbus_client, mock_commbus_stub):
+        """Test publish returns False on failure."""
+        mock_commbus_stub.Publish.return_value = MagicMock(success=False, error="some error")
+
+        result = await commbus_client.publish("AgentStarted", {"name": "planner"})
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_publish_grpc_error(self, commbus_client, mock_commbus_stub):
+        """Test publish returns False on gRPC error."""
+        mock_commbus_stub.Publish.side_effect = grpc.RpcError()
+
+        result = await commbus_client.publish("AgentStarted", {"name": "planner"})
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_send_success(self, commbus_client, mock_commbus_stub):
+        """Test send returns True on success."""
+        mock_commbus_stub.Send.return_value = MagicMock(success=True)
+
+        result = await commbus_client.send("InvalidateCache", {"key": "all"})
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_send_failure(self, commbus_client, mock_commbus_stub):
+        """Test send returns False on failure."""
+        mock_commbus_stub.Send.return_value = MagicMock(success=False, error="error")
+
+        result = await commbus_client.send("InvalidateCache", {"key": "all"})
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_send_grpc_error(self, commbus_client, mock_commbus_stub):
+        """Test send returns False on gRPC error."""
+        mock_commbus_stub.Send.side_effect = grpc.RpcError()
+
+        result = await commbus_client.send("InvalidateCache", {"key": "all"})
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_query_success(self, commbus_client, mock_commbus_stub):
+        """Test query returns deserialized result."""
+        import json
+        mock_commbus_stub.Query.return_value = MagicMock(
+            success=True,
+            result=json.dumps({"setting": "value"}).encode("utf-8"),
+        )
+
+        result = await commbus_client.query("GetSettings", {"key": "llm"})
+
+        assert result == {"setting": "value"}
+
+    @pytest.mark.asyncio
+    async def test_query_failure(self, commbus_client, mock_commbus_stub):
+        """Test query raises RuntimeError on failure."""
+        mock_commbus_stub.Query.return_value = MagicMock(success=False, error="not found")
+
+        with pytest.raises(RuntimeError, match="CommBus query failed"):
+            await commbus_client.query("GetSettings", {"key": "llm"})
+
+    @pytest.mark.asyncio
+    async def test_query_grpc_error(self, commbus_client, mock_commbus_stub):
+        """Test query raises RuntimeError on gRPC error."""
+        mock_commbus_stub.Query.side_effect = grpc.RpcError()
+
+        with pytest.raises(RuntimeError, match="CommBus query failed"):
+            await commbus_client.query("GetSettings", {"key": "llm"})
+
+
+class TestCommBusProperty:
+    """Tests for commbus property on KernelClient."""
+
+    def test_commbus_lazy_creation(self, mock_kernel_client):
+        """Test commbus property creates client lazily."""
+        assert mock_kernel_client._commbus_client is None
+
+        commbus = mock_kernel_client.commbus
+
+        assert commbus is not None
+        assert mock_kernel_client._commbus_client is commbus
+
+    def test_commbus_returns_same_instance(self, mock_kernel_client):
+        """Test commbus returns same instance on multiple calls."""
+        commbus1 = mock_kernel_client.commbus
+        commbus2 = mock_kernel_client.commbus
+
+        assert commbus1 is commbus2
+
+
+class TestEnvelopeOperations:
+    """Tests for envelope operations."""
+
+    @pytest.fixture
+    def mock_engine_stub_configured(self, mock_engine_stub):
+        """Configure engine stub with envelope responses."""
+        mock_engine_stub.CreateEnvelope = AsyncMock(return_value=pb2.Envelope(
+            envelope_id="env-1",
+            request_id="req-1",
+        ))
+        mock_engine_stub.CheckBounds = AsyncMock(return_value=MagicMock(
+            can_continue=True,
+            terminal_reason=pb2.TERMINAL_REASON_UNSPECIFIED,
+            llm_calls_remaining=10,
+            agent_hops_remaining=5,
+            iterations_remaining=3,
+        ))
+        return mock_engine_stub
+
+    @pytest.mark.asyncio
+    async def test_create_envelope(self, mock_kernel_client, mock_engine_stub_configured):
+        """Test create_envelope."""
+        mock_kernel_client._engine_stub = mock_engine_stub_configured
+
+        envelope = await mock_kernel_client.create_envelope(
+            raw_input="Hello",
+            user_id="user-1",
+            session_id="sess-1",
+        )
+
+        assert envelope.envelope_id == "env-1"
+        mock_engine_stub_configured.CreateEnvelope.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_envelope_error(self, mock_kernel_client, mock_engine_stub):
+        """Test create_envelope raises on error."""
+        mock_engine_stub.CreateEnvelope.side_effect = grpc.RpcError()
+        mock_kernel_client._engine_stub = mock_engine_stub
+
+        with pytest.raises(KernelClientError, match="CreateEnvelope failed"):
+            await mock_kernel_client.create_envelope(raw_input="Hello")
+
+    @pytest.mark.asyncio
+    async def test_check_bounds(self, mock_kernel_client, mock_engine_stub_configured):
+        """Test check_bounds."""
+        mock_kernel_client._engine_stub = mock_engine_stub_configured
+
+        result = await mock_kernel_client.check_bounds(pb2.Envelope())
+
+        assert result["can_continue"] is True
+        assert result["llm_calls_remaining"] == 10
+
+    @pytest.mark.asyncio
+    async def test_check_bounds_error(self, mock_kernel_client, mock_engine_stub):
+        """Test check_bounds raises on error."""
+        mock_engine_stub.CheckBounds.side_effect = grpc.RpcError()
+        mock_kernel_client._engine_stub = mock_engine_stub
+
+        with pytest.raises(KernelClientError, match="CheckBounds failed"):
+            await mock_kernel_client.check_bounds(pb2.Envelope())
+
+
+class TestConvenienceMethodErrors:
+    """Tests for error handling in convenience methods."""
+
+    @pytest.mark.asyncio
+    async def test_record_llm_call_error_returns_none(self, mock_kernel_client, mock_kernel_stub):
+        """Test record_llm_call returns None on KernelClientError."""
+        mock_kernel_stub.RecordUsage.side_effect = grpc.RpcError()
+
+        result = await mock_kernel_client.record_llm_call(pid="proc-1")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_record_tool_call_error_returns_none(self, mock_kernel_client, mock_kernel_stub):
+        """Test record_tool_call returns None on KernelClientError."""
+        mock_kernel_stub.RecordUsage.side_effect = grpc.RpcError()
+
+        result = await mock_kernel_client.record_tool_call(pid="proc-1")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_record_agent_hop_error_returns_none(self, mock_kernel_client, mock_kernel_stub):
+        """Test record_agent_hop returns None on KernelClientError."""
+        mock_kernel_stub.RecordUsage.side_effect = grpc.RpcError()
+
+        result = await mock_kernel_client.record_agent_hop(pid="proc-1")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_record_tool_call_quota_exceeded(self, mock_kernel_client, mock_kernel_stub):
+        """Test record_tool_call returns reason when quota exceeded."""
+        mock_kernel_stub.RecordUsage.return_value = make_resource_usage()
+        mock_kernel_stub.CheckQuota.return_value = make_quota_result(
+            within_bounds=False,
+            exceeded_reason="max_tool_calls exceeded",
+        )
+
+        result = await mock_kernel_client.record_tool_call(pid="proc-1")
+
+        assert result == "max_tool_calls exceeded"
+
+    @pytest.mark.asyncio
+    async def test_record_agent_hop_quota_exceeded(self, mock_kernel_client, mock_kernel_stub):
+        """Test record_agent_hop returns reason when quota exceeded."""
+        mock_kernel_stub.RecordUsage.return_value = make_resource_usage()
+        mock_kernel_stub.CheckQuota.return_value = make_quota_result(
+            within_bounds=False,
+            exceeded_reason="max_agent_hops exceeded",
+        )
+
+        result = await mock_kernel_client.record_agent_hop(pid="proc-1")
+
+        assert result == "max_agent_hops exceeded"
+
+
+class TestProcessLifecycleErrors:
+    """Tests for error handling in process lifecycle methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_process_other_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test get_process raises on non-NOT_FOUND errors."""
+        error = grpc.RpcError()
+        error.code = lambda: grpc.StatusCode.INTERNAL
+        mock_kernel_stub.GetProcess.side_effect = error
+
+        with pytest.raises(KernelClientError, match="GetProcess failed"):
+            await mock_kernel_client.get_process("proc-1")
+
+    @pytest.mark.asyncio
+    async def test_schedule_process_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test schedule_process raises on error."""
+        mock_kernel_stub.ScheduleProcess.side_effect = grpc.RpcError()
+
+        with pytest.raises(KernelClientError, match="ScheduleProcess failed"):
+            await mock_kernel_client.schedule_process("proc-1")
+
+    @pytest.mark.asyncio
+    async def test_get_next_runnable_other_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test get_next_runnable raises on non-NOT_FOUND errors."""
+        error = grpc.RpcError()
+        error.code = lambda: grpc.StatusCode.INTERNAL
+        mock_kernel_stub.GetNextRunnable.side_effect = error
+
+        with pytest.raises(KernelClientError, match="GetNextRunnable failed"):
+            await mock_kernel_client.get_next_runnable()
+
+    @pytest.mark.asyncio
+    async def test_transition_state_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test transition_state raises on error."""
+        mock_kernel_stub.TransitionState.side_effect = grpc.RpcError()
+
+        with pytest.raises(KernelClientError, match="TransitionState failed"):
+            await mock_kernel_client.transition_state("proc-1", "RUNNING")
+
+    @pytest.mark.asyncio
+    async def test_terminate_process_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test terminate_process raises on error."""
+        mock_kernel_stub.TerminateProcess.side_effect = grpc.RpcError()
+
+        with pytest.raises(KernelClientError, match="TerminateProcess failed"):
+            await mock_kernel_client.terminate_process("proc-1")
+
+    @pytest.mark.asyncio
+    async def test_record_usage_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test record_usage raises on error."""
+        mock_kernel_stub.RecordUsage.side_effect = grpc.RpcError()
+
+        with pytest.raises(KernelClientError, match="RecordUsage failed"):
+            await mock_kernel_client.record_usage(pid="proc-1", llm_calls=1)
+
+    @pytest.mark.asyncio
+    async def test_check_quota_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test check_quota raises on error."""
+        mock_kernel_stub.CheckQuota.side_effect = grpc.RpcError()
+
+        with pytest.raises(KernelClientError, match="CheckQuota failed"):
+            await mock_kernel_client.check_quota("proc-1")
+
+    @pytest.mark.asyncio
+    async def test_check_rate_limit_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test check_rate_limit raises on error."""
+        mock_kernel_stub.CheckRateLimit.side_effect = grpc.RpcError()
+
+        with pytest.raises(KernelClientError, match="CheckRateLimit failed"):
+            await mock_kernel_client.check_rate_limit(user_id="user-1")
+
+    @pytest.mark.asyncio
+    async def test_list_processes_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test list_processes raises on error."""
+        mock_kernel_stub.ListProcesses.side_effect = grpc.RpcError()
+
+        with pytest.raises(KernelClientError, match="ListProcesses failed"):
+            await mock_kernel_client.list_processes()
+
+    @pytest.mark.asyncio
+    async def test_get_process_counts_error(self, mock_kernel_client, mock_kernel_stub):
+        """Test get_process_counts raises on error."""
+        mock_kernel_stub.GetProcessCounts.side_effect = grpc.RpcError()
+
+        with pytest.raises(KernelClientError, match="GetProcessCounts failed"):
+            await mock_kernel_client.get_process_counts()
+
+
+class TestCallKernelInternal:
+    """Tests for _call_kernel internal method."""
+
+    @pytest.mark.asyncio
+    async def test_call_kernel_unknown_method(self, mock_grpc_channel):
+        """Test _call_kernel raises for unknown method."""
+        # Create client with a stub that has no methods
+        client = KernelClient(channel=mock_grpc_channel)
+        # Replace stub with one that returns None for unknown attrs
+        stub = MagicMock(spec=[])  # Empty spec = no methods
+        client._kernel_stub = stub
+
+        with pytest.raises(KernelClientError, match="Unknown KernelService method"):
+            await client._call_kernel("NonExistentMethod", None)
+
+    @pytest.mark.asyncio
+    async def test_call_kernel_with_metadata(self, mock_kernel_client, mock_kernel_stub):
+        """Test _call_kernel passes metadata when context is set."""
+        mock_kernel_client.set_context(user_id="user-1", session_id="sess-1")
+        mock_kernel_stub.GetProcess.return_value = make_pcb()
+
+        await mock_kernel_client._call_kernel(
+            "GetProcess",
+            pb2.GetProcessRequest(pid="proc-1"),
+        )
+
+        # Verify metadata was passed
+        mock_kernel_stub.GetProcess.assert_called_once()
+        call_kwargs = mock_kernel_stub.GetProcess.call_args
+        assert "metadata" in call_kwargs.kwargs
+
+    @pytest.mark.asyncio
+    async def test_get_next_runnable_not_found(self, mock_kernel_client, mock_kernel_stub):
+        """Test get_next_runnable returns None on NOT_FOUND."""
+        error = grpc.RpcError()
+        error.code = lambda: grpc.StatusCode.NOT_FOUND
+        mock_kernel_stub.GetNextRunnable.side_effect = error
+
+        result = await mock_kernel_client.get_next_runnable()
+
+        assert result is None

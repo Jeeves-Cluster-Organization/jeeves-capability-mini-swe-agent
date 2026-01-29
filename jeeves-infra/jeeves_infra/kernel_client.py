@@ -94,6 +94,12 @@ class KernelClient:
         async with KernelClient.connect("localhost:50051") as client:
             pcb = await client.create_process(pid="req-123", ...)
             usage = await client.record_usage(pid="req-123", llm_calls=1)
+
+    Authentication:
+        The Go kernel requires user context (user_id, session_id) for all
+        operations. CreateProcess takes these as request fields. Subsequent
+        operations require gRPC metadata headers. Use set_context() to set
+        the default context, or pass user_id/session_id to individual methods.
     """
 
     def __init__(
@@ -115,6 +121,10 @@ class KernelClient:
         self._engine_stub = engine_stub or pb2_grpc.EngineServiceStub(channel)
         self._commbus_client: Optional["CommBusClient"] = None
         self._closed = False
+        # Default context for authentication (can be overridden per-call)
+        self._default_user_id: str = ""
+        self._default_session_id: str = ""
+        self._default_request_id: str = ""
 
     @classmethod
     @asynccontextmanager
@@ -166,6 +176,45 @@ class KernelClient:
         if self._commbus_client is None:
             self._commbus_client = CommBusClient(self._channel)
         return self._commbus_client
+
+    def set_context(
+        self,
+        user_id: str = "",
+        session_id: str = "",
+        request_id: str = "",
+    ) -> "KernelClient":
+        """Set default authentication context for subsequent calls.
+
+        The Go kernel requires user_id and session_id for process operations.
+        This context is sent as gRPC metadata headers.
+
+        Args:
+            user_id: User identifier
+            session_id: Session identifier
+            request_id: Request identifier (optional)
+
+        Returns:
+            Self for method chaining
+        """
+        self._default_user_id = user_id
+        self._default_session_id = session_id
+        self._default_request_id = request_id
+        return self
+
+    def _get_metadata(self) -> List[tuple]:
+        """Build gRPC metadata for authentication.
+
+        Returns:
+            List of metadata tuples for gRPC call
+        """
+        metadata = []
+        if self._default_user_id:
+            metadata.append(("user_id", self._default_user_id))
+        if self._default_session_id:
+            metadata.append(("session_id", self._default_session_id))
+        if self._default_request_id:
+            metadata.append(("request_id", self._default_request_id))
+        return metadata
 
     # =========================================================================
     # Process Lifecycle (KernelService)
@@ -229,7 +278,15 @@ class KernelClient:
         )
 
         try:
+            # CreateProcess takes context in request fields, not metadata
             response = await self._call_kernel("CreateProcess", request)
+            # Store context for subsequent operations on this process
+            if user_id:
+                self._default_user_id = user_id
+            if session_id:
+                self._default_session_id = session_id
+            if request_id:
+                self._default_request_id = request_id
             return self._pcb_to_info(response)
         except grpc.RpcError as e:
             logger.error(f"Failed to create process {pid}: {e}")
@@ -637,10 +694,23 @@ class KernelClient:
     # =========================================================================
 
     async def _call_kernel(self, method_name: str, request: Any) -> Any:
-        """Call a KernelService method via the generated stub."""
+        """Call a KernelService method via the generated stub.
+
+        Args:
+            method_name: Name of the RPC method to call
+            request: Proto request message
+
+        Returns:
+            Proto response message
+        """
         method = getattr(self._kernel_stub, method_name, None)
         if method is None:
             raise KernelClientError(f"Unknown KernelService method: {method_name}")
+
+        # Build metadata for authentication (Go kernel requires this for most ops)
+        metadata = self._get_metadata()
+        if metadata:
+            return await method(request, metadata=metadata)
         return await method(request)
 
     def _pcb_to_info(self, pcb: pb2.ProcessControlBlock) -> ProcessInfo:
