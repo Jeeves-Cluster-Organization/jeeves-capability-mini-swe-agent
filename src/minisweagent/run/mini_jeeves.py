@@ -3,6 +3,7 @@
 
 All execution flows through jeeves-core's PipelineRunner:
 - unified: Single-stage pipeline with self-routing (default, mimics original agent)
+- sequential: 4-stage CoT pipeline (Understand → Plan → Execute → Synthesize)
 - parallel: Multi-stage pipeline with parallel analysis
 
 v2.0 Features:
@@ -86,9 +87,9 @@ def _create_llm_factory(provider: str, base_url: str, model: Optional[str] = Non
             from jeeves_infra.settings import Settings
 
             settings = Settings(
-                llm_provider=provider,
-                llamaserver_host=base_url.rstrip("/v1"),
-                default_model=model or "default",
+                jeeves_llm_adapter=provider,
+                jeeves_llm_base_url=base_url,
+                jeeves_llm_model=model or "default",
             )
             return create_llm_provider(settings, agent_name=agent_role)
         except ImportError:
@@ -158,7 +159,7 @@ def db_migrate(
             console.print("[yellow]Dry run - showing pending migrations:[/yellow]")
         await migrator.migrate(dry_run=dry_run)
         if not dry_run:
-            console.print("[green]✓ Migrations applied successfully[/green]")
+            console.print("[green][OK] Migrations applied successfully[/green]")
 
     asyncio.run(run())
 
@@ -250,7 +251,7 @@ def session_delete(
         orchestrator = create_swe_orchestrator(database_url=database_url)
         await orchestrator.delete_session(session_id)
         await orchestrator.close()
-        console.print(f"[green]✓ Deleted session: {session_id}[/green]")
+        console.print(f"[green][OK] Deleted session: {session_id}[/green]")
 
     asyncio.run(run())
 
@@ -305,7 +306,7 @@ def index_codebase(
                     console.print(f"[red]Failed to index {file_path}: {e}[/red]")
 
         await pool.close()
-        console.print(f"[green]✓ Indexed {len(files)} files[/green]")
+        console.print(f"[green][OK] Indexed {len(files)} files[/green]")
 
     asyncio.run(run())
 
@@ -398,7 +399,7 @@ def graph_build(
                     console.print(f"[red]Failed to process {file_path}: {e}[/red]")
 
         await pool.close()
-        console.print(f"[green]✓ Built graph for {len(files)} files[/green]")
+        console.print(f"[green][OK] Built graph for {len(files)} files[/green]")
 
     asyncio.run(run())
 
@@ -531,7 +532,7 @@ def tool_reset(
 
         await health_service.reset_metrics(tool_name)
         await pool.close()
-        console.print(f"[green]✓ Reset metrics for {tool_name}[/green]")
+        console.print(f"[green][OK] Reset metrics for {tool_name}[/green]")
 
     asyncio.run(run())
 
@@ -568,11 +569,11 @@ async def _run_async(
     console.print("[cyan]Connecting to Go kernel...[/cyan]")
     try:
         jeeves_context = create_jeeves_context(kernel_address=kernel_address)
-        console.print(f"[green]✓ Connected to kernel at {jeeves_context._kernel_address}[/green]")
+        console.print(f"[green][OK] Connected to kernel at {jeeves_context._kernel_address}[/green]")
     except RuntimeError as e:
         console.print(f"[bold red]Error: {e}[/bold red]")
         console.print("\n[yellow]The Go kernel is required. Start it with:[/yellow]")
-        console.print("  cd jeeves-core && go run ./cmd/kernel --grpc-port 50051")
+        console.print("  cd jeeves-core && go run ./cmd -addr :50051")
         console.print("\n[yellow]Then set:[/yellow]")
         console.print("  export KERNEL_GRPC_ADDRESS=localhost:50051")
         return {"status": "error", "error": str(e)}
@@ -640,8 +641,9 @@ _HELP_TEXT = """Run mini-SWE-agent with jeeves-core orchestration (v2.0).
 [not dim]
 Pipeline modes:
 
-[bold green]--pipeline unified[/bold green]  Single-agent loop (default)
-[bold green]--pipeline parallel[/bold green] Multi-stage with parallel analysis
+[bold green]--pipeline unified[/bold green]    Single-agent loop (default)
+[bold green]--pipeline sequential[/bold green] 4-stage CoT (Understand→Plan→Execute→Synthesize)
+[bold green]--pipeline parallel[/bold green]   Multi-stage with parallel analysis
 
 Execution modes:
 
@@ -667,7 +669,7 @@ More commands: mini-jeeves --help
 @app.command(help=_HELP_TEXT)
 def run(
     task: str = typer.Option(None, "-t", "--task", help="Task/problem statement"),
-    pipeline: str = typer.Option("unified", "-p", "--pipeline", help="Pipeline mode: unified or parallel"),
+    pipeline: str = typer.Option("unified", "-p", "--pipeline", help="Pipeline mode: unified, sequential, or parallel"),
     yolo: bool = typer.Option(False, "-y", "--yolo", help="Skip command confirmations"),
     llm_provider: str = typer.Option(
         os.getenv("JEEVES_LLM_ADAPTER", "openai_http"),

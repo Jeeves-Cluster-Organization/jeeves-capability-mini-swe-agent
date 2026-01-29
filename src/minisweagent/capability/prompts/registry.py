@@ -135,6 +135,11 @@ class MiniSWEPromptRegistry(PromptRegistry):
         self._templates["mini_swe.executor"] = self._create_executor_prompt()
         self._templates["mini_swe.verifier"] = self._create_verifier_prompt()
 
+        # Sequential CoT pipeline prompts (Understand → Plan → Execute → Synthesize)
+        self._templates["mini_swe.cot_understand"] = self._create_cot_understand_prompt()
+        self._templates["mini_swe.cot_plan"] = self._create_cot_plan_prompt()
+        self._templates["mini_swe.cot_synthesize"] = self._create_cot_synthesize_prompt()
+
     def _combine_templates(self, system: str, instance: str) -> str:
         """Combine system and instance templates for single-agent mode.
 
@@ -300,6 +305,157 @@ Verdicts:
 - "success": All tests pass and implementation is correct
 - "loop_back": Changes need revision (provide specific issues)"""
 
+    # =========================================================================
+    # SEQUENTIAL COT PIPELINE PROMPTS
+    # =========================================================================
+
+    def _create_cot_understand_prompt(self) -> str:
+        """Create prompt for Understand stage of CoT pipeline."""
+        return """You are a code understanding specialist. Your job is to analyze the task and explore the codebase to gather context.
+
+## Task
+{{task}}
+
+## Your Role
+You are the FIRST stage in a chain-of-thought pipeline. Your analysis will be used by the Plan stage to create an execution plan.
+
+## Instructions
+1. Analyze what the task is asking for
+2. Use the available tools to explore the codebase:
+   - `find_files` to locate relevant files
+   - `grep_search` to find code patterns
+   - `read_file` to examine file contents
+   - `bash_execute` for other exploration (e.g., `ls`, `tree`)
+3. Identify key files, functions, and patterns relevant to the task
+4. Note any dependencies or potential issues
+
+## Output Format
+Provide your analysis in the following JSON format:
+```json
+{
+  "task_summary": "Brief description of what needs to be done",
+  "relevant_files": [
+    {"path": "file.py", "purpose": "Why this file is relevant"}
+  ],
+  "key_findings": [
+    "Important observation 1",
+    "Important observation 2"
+  ],
+  "dependencies": ["List of dependencies or related components"],
+  "potential_issues": ["Any concerns or edge cases to consider"],
+  "recommended_approach": "High-level suggestion for how to proceed"
+}
+```
+
+Focus on gathering information, not making changes. The Plan stage will use your analysis."""
+
+    def _create_cot_plan_prompt(self) -> str:
+        """Create prompt for Plan stage of CoT pipeline."""
+        return """You are a planning specialist. Your job is to create a detailed execution plan based on the understanding gathered.
+
+## Task
+{{task}}
+
+## Understanding from Previous Stage
+{{understanding}}
+
+## Your Role
+You are the SECOND stage in a chain-of-thought pipeline. Create a detailed plan that the Execute stage will follow EXACTLY. The Execute stage has NO LLM - it will run your commands directly.
+
+## Instructions
+1. Review the understanding gathered in the previous stage
+2. Create a step-by-step plan with specific bash commands
+3. Each step should be atomic and verifiable
+4. Include error handling considerations
+5. Specify the expected outcome
+
+## CRITICAL: Command Format
+The Execute stage will run your commands as-is. Make sure:
+- Commands are complete and correct
+- File paths are accurate (based on exploration)
+- Edit commands use proper syntax (sed, echo, etc.)
+- Each command is independent or properly sequenced
+
+## Output Format
+Provide your plan as JSON (this will be parsed by the Execute stage):
+```json
+{
+  "steps": [
+    {
+      "id": 1,
+      "action": "read|write|edit|run",
+      "command": "cat src/main.py",
+      "purpose": "Examine the entry point",
+      "expected_output": "Python source code"
+    },
+    {
+      "id": 2,
+      "action": "edit",
+      "command": "sed -i 's/old_value/new_value/' src/config.py",
+      "purpose": "Update configuration",
+      "expected_output": "File modified"
+    }
+  ],
+  "test_command": "pytest tests/ -v",
+  "expected_outcome": "All tests pass, feature implemented correctly",
+  "rollback_steps": [
+    "git checkout -- src/config.py"
+  ]
+}
+```
+
+Be precise - the Execute stage cannot improvise or ask questions."""
+
+    def _create_cot_synthesize_prompt(self) -> str:
+        """Create prompt for Synthesize stage of CoT pipeline."""
+        return """You are a synthesis specialist. Your job is to review the execution results and provide a final summary.
+
+## Task
+{{task}}
+
+## Understanding
+{{understanding}}
+
+## Plan
+{{plan}}
+
+## Execution Results
+{{execution}}
+
+## Your Role
+You are the FINAL stage in a chain-of-thought pipeline. Review what happened and provide a comprehensive summary.
+
+## Instructions
+1. Review the execution results from each step
+2. Verify the task was completed successfully
+3. Run tests if not already run
+4. Identify any issues or incomplete items
+5. Provide a clear summary of what was accomplished
+
+## Available Tools
+- `bash_execute` - Run verification commands
+- `run_tests` - Execute test suite
+- `read_file` - Verify file contents
+
+## Output Format
+Provide your synthesis as JSON:
+```json
+{
+  "completed": true,
+  "summary": "Brief description of what was accomplished",
+  "changes_made": [
+    {"file": "path/to/file.py", "change": "Description of change"}
+  ],
+  "tests_run": true,
+  "tests_passed": true,
+  "issues": [],
+  "recommendations": ["Any follow-up suggestions"],
+  "final_message": "Task completed successfully. [Details of what was done]"
+}
+```
+
+If the task failed or is incomplete, set "completed": false and explain what went wrong."""
+
     def get(self, key: str, context: Optional[Dict[str, Any]] = None, **kwargs) -> str:
         """Get a rendered prompt template.
 
@@ -342,6 +498,8 @@ Verdicts:
             "release": platform.release(),
             "version": platform.version(),
             "machine": platform.machine(),
+            # Conversation history (populated by orchestrator hooks)
+            "history_formatted": "",
         }
 
     def register(self, key: str, template: str) -> None:

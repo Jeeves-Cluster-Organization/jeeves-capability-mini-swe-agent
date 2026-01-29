@@ -42,6 +42,7 @@ from jeeves_infra.runtime import (
     Persistence,
     PromptRegistry,
 )
+from jeeves_infra.protocols import Envelope
 from jeeves_infra.protocols import AgentConfig, PipelineConfig, RoutingRule
 from jeeves_infra.protocols import RequestContext
 
@@ -70,6 +71,240 @@ if TYPE_CHECKING:
     pass
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# CONVERSATION HISTORY HOOKS (Capability Layer)
+# =============================================================================
+
+async def _pre_process_conversation_history(envelope: "Envelope", agent: Optional["Agent"]) -> "Envelope":
+    """Pre-process hook: Initialize and format conversation history.
+
+    This runs before each LLM call in the unified pipeline loop.
+    The history is stored in envelope.metadata and rendered in the prompt.
+    """
+    if "conversation_history" not in envelope.metadata:
+        envelope.metadata["conversation_history"] = []
+
+    # Format history for prompt inclusion
+    history = envelope.metadata["conversation_history"]
+    envelope.metadata["history_formatted"] = _format_conversation_history(history)
+
+    return envelope
+
+
+async def _post_process_conversation_history(envelope: "Envelope", output: Dict[str, Any], agent: Optional["Agent"]) -> "Envelope":
+    """Post-process hook: Extract action, execute, and append to history.
+
+    This runs after each LLM response in the unified pipeline loop.
+    Full action loop:
+    1. Extract bash action from LLM response
+    2. Execute via tool executor
+    3. Format observation with action_observation_template
+    4. Append both response and observation to history
+    5. Set completion/error flags for routing
+    """
+    from minisweagent.capability.agents.swe_post_processor import SWEPostProcessor, COMPLETION_MARKERS
+
+    history = envelope.metadata.get("conversation_history", [])
+    iteration = len(history) + 1
+
+    # Debug: Log hook entry
+    logger.debug(f"post_process hook called, iteration={iteration}, agent={agent.name if agent else None}, has_tools={agent.tools is not None if agent else False}")
+
+    # Extract the response text from output
+    response_text = ""
+    if isinstance(output, dict):
+        response_text = output.get("response", "") or output.get("content", "") or str(output)
+    else:
+        response_text = str(output)
+
+    logger.debug(f"Response text length: {len(response_text)}, first 200 chars: {response_text[:200]}")
+
+    # Initialize post-processor for action extraction
+    post_processor = SWEPostProcessor()
+
+    # Extract bash action from response
+    action = post_processor.extract_action(response_text)
+    logger.debug(f"Action extracted: {action}")
+
+    observation_text = ""
+    if action and agent and agent.tools:
+        logger.info(f"Executing bash command: {action.get('action', '')[:100]}")
+        # Execute the bash command
+        command = action.get("action", "")
+        try:
+            tool_result = await agent.tools.execute("bash_execute", {"command": command})
+            output["tool_results"] = [{"tool": "bash_execute", "result": tool_result, "params": {"command": command}}]
+
+            # Check for completion marker in output
+            tool_output = tool_result.get("output", "")
+            lines = tool_output.lstrip().splitlines()
+            if lines and lines[0].strip() in COMPLETION_MARKERS:
+                output["completed"] = True
+                output["final_message"] = "\n".join(lines[1:]).strip()
+                logger.info("Completion marker detected, ending pipeline")
+
+            # Format observation using template
+            if agent.prompt_registry:
+                observation_text = agent.prompt_registry.get(
+                    "mini_swe.action_observation",
+                    output=tool_result
+                )
+            else:
+                # Fallback formatting
+                observation_text = f"<returncode>{tool_result.get('returncode', -1)}</returncode>\n<output>\n{tool_output[:10000]}\n</output>"
+
+        except Exception as e:
+            logger.error(f"Tool execution failed: {e}")
+            observation_text = f"<error>Tool execution failed: {e}</error>"
+            output["tool_error"] = str(e)
+
+    elif action:
+        # Action found but no tool executor available
+        logger.warning("Action extracted but no tool executor available")
+        observation_text = "<error>No tool executor configured</error>"
+
+    elif not action and response_text.strip():
+        # No valid action found - check for format error
+        output["format_error"] = True
+        output["needs_retry"] = True
+
+    # Append to conversation history
+    if response_text.strip() or observation_text:
+        history_entry = {
+            "iteration": iteration,
+            "response": response_text[:8000],
+        }
+        if observation_text:
+            history_entry["observation"] = observation_text[:8000]
+        history.append(history_entry)
+        envelope.metadata["conversation_history"] = history
+
+    return envelope
+
+
+def _format_conversation_history(history: List[Dict[str, Any]]) -> str:
+    """Format conversation history for prompt inclusion.
+
+    Returns a formatted string suitable for Jinja2 template rendering.
+    Includes both LLM responses and tool observations.
+    """
+    if not history:
+        return ""
+
+    formatted = ["## Previous Actions in This Session\n"]
+    for entry in history[-10:]:  # Last 10 iterations to avoid token explosion
+        formatted.append(f"### Iteration {entry['iteration']}")
+        formatted.append(f"**Response:**\n{entry['response']}")
+        if entry.get("observation"):
+            formatted.append(f"**Observation:**\n{entry['observation']}")
+        formatted.append("")  # Blank line between iterations
+
+    return "\n".join(formatted)
+
+
+# =============================================================================
+# SEQUENTIAL COT PIPELINE HOOKS
+# =============================================================================
+
+async def _execute_stage_post_process(
+    envelope: "Envelope",
+    output: Dict[str, Any],
+    agent: Optional["Agent"]
+) -> "Envelope":
+    """Post-process hook for Execute stage: run plan commands deterministically.
+
+    This hook executes commands from the Plan stage output without LLM reasoning.
+    The Plan stage should produce a JSON plan with steps containing commands.
+
+    Expected plan format:
+    {
+        "steps": [
+            {"id": 1, "action": "read", "command": "cat file.py", "purpose": "..."},
+            {"id": 2, "action": "edit", "command": "sed -i ...", "purpose": "..."}
+        ],
+        "test_command": "pytest tests/",
+        "expected_outcome": "..."
+    }
+    """
+    import json
+
+    # Get plan from previous stage
+    plan_output = envelope.outputs.get("plan", {})
+
+    # Handle plan as string (LLM might return JSON string)
+    if isinstance(plan_output, dict):
+        plan_data = plan_output.get("response", plan_output)
+        if isinstance(plan_data, str):
+            # Try to extract JSON from response
+            try:
+                # Look for JSON block in response
+                import re
+                json_match = re.search(r'\{[\s\S]*\}', plan_data)
+                if json_match:
+                    plan_data = json.loads(json_match.group())
+                else:
+                    plan_data = {"steps": [], "error": "No JSON plan found in response"}
+            except json.JSONDecodeError:
+                plan_data = {"steps": [], "error": "Failed to parse plan JSON"}
+    else:
+        plan_data = {"steps": [], "error": "Invalid plan format"}
+
+    steps = plan_data.get("steps", [])
+    logger.info(f"Execute stage: processing {len(steps)} steps from plan")
+
+    results = []
+    completed = False
+
+    for step in steps:
+        command = step.get("command")
+        if not command:
+            logger.warning(f"Step {step.get('id', '?')} has no command, skipping")
+            continue
+
+        if agent and agent.tools:
+            logger.info(f"Executing step {step.get('id', '?')}: {command[:80]}...")
+            try:
+                result = await agent.tools.execute("bash_execute", {"command": command})
+                step_result = {
+                    "step_id": step.get("id"),
+                    "action": step.get("action"),
+                    "command": command,
+                    "result": result,
+                }
+                results.append(step_result)
+
+                # Check for completion marker
+                tool_output = result.get("output", "")
+                if "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT" in tool_output or \
+                   "MINI_SWE_AGENT_FINAL_OUTPUT" in tool_output:
+                    completed = True
+                    logger.info("Completion marker detected in execute stage")
+                    break
+
+                # Check for error
+                if result.get("returncode", 0) != 0:
+                    logger.warning(f"Step {step.get('id', '?')} failed with returncode {result.get('returncode')}")
+
+            except Exception as e:
+                logger.error(f"Execute stage error: {e}")
+                results.append({
+                    "step_id": step.get("id"),
+                    "command": command,
+                    "error": str(e),
+                })
+        else:
+            logger.warning("Execute stage: no tool executor available")
+
+    # Store results in output
+    output["execution_results"] = results
+    output["steps_executed"] = len(results)
+    output["plan_data"] = plan_data
+    if completed:
+        output["completed"] = True
+
+    return envelope
 
 
 # =============================================================================
@@ -150,7 +385,7 @@ class SWEOrchestrator:
         if kernel_client is None:
             raise RuntimeError(
                 "Go kernel is required. Start the kernel with:\n"
-                "  cd jeeves-core && go run ./cmd/kernel --grpc-port 50051\n"
+                "  cd jeeves-core && go run ./cmd -addr :50051\n"
                 "Then set: export KERNEL_GRPC_ADDRESS=localhost:50051"
             )
         self.config = config
@@ -302,6 +537,20 @@ class SWEOrchestrator:
                 persistence=self.persistence,
                 prompt_registry=self.prompt_registry,
             )
+            # Attach conversation history hooks to swe_agent (unified mode)
+            # This keeps conversation logic in capability layer, not runtime
+            if self.config.pipeline_mode == "unified":
+                swe_agent = self._pipeline_runner.get_agent("swe_agent")
+                if swe_agent:
+                    swe_agent.pre_process = _pre_process_conversation_history
+                    swe_agent.post_process = _post_process_conversation_history
+                    logger.info("Conversation history hooks attached to swe_agent")
+            # Attach execute stage hook for sequential CoT mode
+            elif self.config.pipeline_mode == "sequential":
+                execute_agent = self._pipeline_runner.get_agent("execute")
+                if execute_agent:
+                    execute_agent.post_process = _execute_stage_post_process
+                    logger.info("Execute stage hook attached for sequential CoT pipeline")
         return self._pipeline_runner
 
     def _create_pipeline_config(self) -> PipelineConfig:
@@ -309,10 +558,13 @@ class SWEOrchestrator:
 
         Modes:
         - unified: Single-stage with self-routing loop (mimics original agent behavior)
+        - sequential: 4-stage CoT pipeline (Understand → Plan → Execute → Synthesize)
         - parallel: Multi-stage with parallel analysis
         """
         if self.config.pipeline_mode == "unified":
             return self._create_unified_pipeline_config()
+        elif self.config.pipeline_mode == "sequential":
+            return self._create_sequential_pipeline_config()
         else:
             return self._create_parallel_pipeline_config()
 
@@ -324,10 +576,12 @@ class SWEOrchestrator:
         - Loops back to itself until completion marker detected
         - Exits on completion or limits exceeded
         """
+        # Use step_limit if set, otherwise max_llm_calls
+        effective_max_llm_calls = self.config.step_limit if self.config.step_limit > 0 else self.config.max_llm_calls
         return PipelineConfig(
             name="mini_swe_unified",
             max_iterations=self.config.max_iterations,
-            max_llm_calls=self.config.max_llm_calls,
+            max_llm_calls=effective_max_llm_calls,
             max_agent_hops=self.config.max_agent_hops,
             agents=[
                 AgentConfig(
@@ -352,6 +606,79 @@ class SWEOrchestrator:
             ],
             clarification_resume_stage="swe_agent",
             confirmation_resume_stage="swe_agent",
+        )
+
+    def _create_sequential_pipeline_config(self) -> PipelineConfig:
+        """Create 4-stage CoT pipeline: Understand → Plan → Execute → Synthesize.
+
+        This is a chain-of-thought pipeline with 3 LLM calls:
+        - Understand: Analyze task, explore codebase, gather context (LLM + tools)
+        - Plan: Create detailed JSON execution plan (LLM only)
+        - Execute: Run commands from plan deterministically (tools only, no LLM)
+        - Synthesize: Review results, run tests, summarize (LLM + tools)
+        """
+        return PipelineConfig(
+            name="mini_swe_sequential_cot",
+            max_iterations=self.config.max_iterations,
+            max_llm_calls=3,  # Only 3 stages use LLM
+            max_agent_hops=10,
+            agents=[
+                # Stage 1: Understand - Analyze and explore
+                AgentConfig(
+                    name="understand",
+                    output_key="understanding",
+                    has_llm=True,
+                    has_tools=True,
+                    model_role="understand",
+                    allowed_tools=["find_files", "grep_search", "read_file", "bash_execute"],
+                    default_next="plan",
+                    temperature=0.3,
+                    max_tokens=4000,
+                    prompt_key="mini_swe.cot_understand",
+                ),
+                # Stage 2: Plan - Create execution plan (no tools needed)
+                AgentConfig(
+                    name="plan",
+                    output_key="plan",
+                    has_llm=True,
+                    has_tools=False,
+                    model_role="plan",
+                    default_next="execute",
+                    requires=["understand"],
+                    temperature=0.2,
+                    max_tokens=4000,
+                    prompt_key="mini_swe.cot_plan",
+                ),
+                # Stage 3: Execute - Run plan deterministically (no LLM)
+                AgentConfig(
+                    name="execute",
+                    output_key="execution",
+                    has_llm=False,  # Deterministic execution via post_process hook
+                    has_tools=True,
+                    allowed_tools=["bash_execute", "write_file", "edit_file", "read_file"],
+                    default_next="synthesize",
+                    requires=["plan"],
+                ),
+                # Stage 4: Synthesize - Review and summarize
+                AgentConfig(
+                    name="synthesize",
+                    output_key="synthesis",
+                    has_llm=True,
+                    has_tools=True,
+                    model_role="synthesize",
+                    allowed_tools=["bash_execute", "run_tests", "read_file"],
+                    default_next="end",
+                    requires=["execute"],
+                    temperature=0.3,
+                    max_tokens=4000,
+                    prompt_key="mini_swe.cot_synthesize",
+                    routing_rules=[
+                        RoutingRule(condition="completed", value=True, target="end"),
+                    ],
+                ),
+            ],
+            clarification_resume_stage="understand",
+            confirmation_resume_stage="execute",
         )
 
     def _create_parallel_pipeline_config(self) -> PipelineConfig:
@@ -565,6 +892,9 @@ class SWEOrchestrator:
 
         # Build metadata with working memory context
         metadata = dict(kwargs)
+        # Add task to metadata for prompt template rendering
+        # (template uses {{task}} but _call_llm provides {{raw_input}})
+        metadata["task"] = task
         if working_memory:
             metadata["working_memory"] = {
                 "session_id": working_memory.session_id,
@@ -932,6 +1262,7 @@ class _NullLogger:
     """Null logger for when no logger is provided."""
     def info(self, event: str, **kwargs) -> None: pass
     def warn(self, event: str, **kwargs) -> None: pass
+    def warning(self, event: str, **kwargs) -> None: pass
     def error(self, event: str, **kwargs) -> None: pass
     def debug(self, event: str, **kwargs) -> None: pass
     def bind(self, **kwargs) -> "_NullLogger": return self

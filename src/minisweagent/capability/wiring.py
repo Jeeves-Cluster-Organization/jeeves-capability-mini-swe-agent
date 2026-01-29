@@ -266,6 +266,8 @@ def register_capability() -> None:
                 "find_files",
                 "grep_search",
                 "run_tests",
+                "semantic_search",  # v2.0 tool (requires database)
+                "graph_query",      # v2.0 tool (requires database)
             ],
             initializer=_create_tool_catalog,
         ),
@@ -389,7 +391,7 @@ def create_jeeves_context(
         raise RuntimeError(
             f"Failed to create kernel client for {kernel_address}: {e}\n"
             "Ensure the Go kernel is running:\n"
-            "  cd jeeves-core && go run ./cmd/kernel --grpc-port 50051"
+            "  cd jeeves-core && go run ./cmd -addr :50051"
         ) from e
 
 
