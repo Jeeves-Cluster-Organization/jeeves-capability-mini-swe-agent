@@ -20,6 +20,10 @@ agent:
 
     You can execute bash commands and edit files to implement the necessary changes.
 
+    {% if history_formatted %}
+    {{history_formatted}}
+    {% endif %}
+
     ## Recommended Workflow
 
     This workflows should be done step-by-step so that you can iterate on your changes and any possible problems.

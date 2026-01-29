@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -9,6 +10,15 @@ import pytest
 _jeeves_core_path = Path(__file__).parent.parent.parent / "jeeves-core"
 if _jeeves_core_path.exists() and str(_jeeves_core_path) not in sys.path:
     sys.path.insert(0, str(_jeeves_core_path))
+
+
+@pytest.fixture
+def mock_kernel_client():
+    """Create a mock KernelClient for testing."""
+    client = MagicMock()
+    client.record_usage = AsyncMock()
+    client.check_quota = AsyncMock(return_value=MagicMock(within_bounds=True, exceeded_reason=None))
+    return client
 
 
 class TestSWEOrchestratorConfig:
@@ -42,35 +52,35 @@ class TestOrchestratorMode:
 class TestCreateSWEOrchestrator:
     """Tests for orchestrator factory function."""
 
-    def test_create_orchestrator_returns_swe_orchestrator(self):
+    def test_create_orchestrator_returns_swe_orchestrator(self, mock_kernel_client):
         """Test that create_swe_orchestrator returns SWEOrchestrator."""
         from minisweagent.capability.orchestrator import (
             SWEOrchestrator,
             create_swe_orchestrator,
         )
 
-        orchestrator = create_swe_orchestrator()
+        orchestrator = create_swe_orchestrator(kernel_client=mock_kernel_client)
         assert isinstance(orchestrator, SWEOrchestrator)
 
-    def test_create_orchestrator_with_unified_mode(self):
+    def test_create_orchestrator_with_unified_mode(self, mock_kernel_client):
         """Test creating orchestrator with unified pipeline mode."""
         from minisweagent.capability.orchestrator import create_swe_orchestrator
 
-        orchestrator = create_swe_orchestrator(pipeline_mode="unified")
+        orchestrator = create_swe_orchestrator(kernel_client=mock_kernel_client, pipeline_mode="unified")
         assert orchestrator.config.pipeline_mode == "unified"
 
-    def test_create_orchestrator_with_parallel_mode(self):
+    def test_create_orchestrator_with_parallel_mode(self, mock_kernel_client):
         """Test creating orchestrator with parallel pipeline mode."""
         from minisweagent.capability.orchestrator import create_swe_orchestrator
 
-        orchestrator = create_swe_orchestrator(pipeline_mode="parallel")
+        orchestrator = create_swe_orchestrator(kernel_client=mock_kernel_client, pipeline_mode="parallel")
         assert orchestrator.config.pipeline_mode == "parallel"
 
 
 class TestUnifiedPipelineConfig:
     """Tests for unified (single-stage) pipeline configuration."""
 
-    def test_unified_config_has_single_agent(self):
+    def test_unified_config_has_single_agent(self, mock_kernel_client):
         """Test that unified pipeline has single swe_agent."""
         from minisweagent.capability.orchestrator import (
             SWEOrchestrator,
@@ -79,13 +89,14 @@ class TestUnifiedPipelineConfig:
 
         orchestrator = SWEOrchestrator(
             config=SWEOrchestratorConfig(pipeline_mode="unified"),
+            kernel_client=mock_kernel_client,
         )
         config = orchestrator._create_unified_pipeline_config()
 
         assert len(config.agents) == 1
         assert config.agents[0].name == "swe_agent"
 
-    def test_unified_agent_has_self_routing(self):
+    def test_unified_agent_has_self_routing(self, mock_kernel_client):
         """Test that unified agent loops back to itself."""
         from minisweagent.capability.orchestrator import (
             SWEOrchestrator,
@@ -94,13 +105,14 @@ class TestUnifiedPipelineConfig:
 
         orchestrator = SWEOrchestrator(
             config=SWEOrchestratorConfig(pipeline_mode="unified"),
+            kernel_client=mock_kernel_client,
         )
         config = orchestrator._create_unified_pipeline_config()
         agent = config.agents[0]
 
         assert agent.default_next == "swe_agent"
 
-    def test_unified_agent_has_completion_routing(self):
+    def test_unified_agent_has_completion_routing(self, mock_kernel_client):
         """Test that unified agent routes to end on completion."""
         from minisweagent.capability.orchestrator import (
             SWEOrchestrator,
@@ -109,6 +121,7 @@ class TestUnifiedPipelineConfig:
 
         orchestrator = SWEOrchestrator(
             config=SWEOrchestratorConfig(pipeline_mode="unified"),
+            kernel_client=mock_kernel_client,
         )
         config = orchestrator._create_unified_pipeline_config()
         agent = config.agents[0]
@@ -122,7 +135,7 @@ class TestUnifiedPipelineConfig:
         assert completion_rule.value is True
         assert completion_rule.target == "end"
 
-    def test_unified_agent_has_all_tools(self):
+    def test_unified_agent_has_all_tools(self, mock_kernel_client):
         """Test that unified agent has access to all tools."""
         from minisweagent.capability.orchestrator import (
             SWEOrchestrator,
@@ -131,6 +144,7 @@ class TestUnifiedPipelineConfig:
 
         orchestrator = SWEOrchestrator(
             config=SWEOrchestratorConfig(pipeline_mode="unified"),
+            kernel_client=mock_kernel_client,
         )
         config = orchestrator._create_unified_pipeline_config()
         agent = config.agents[0]
@@ -145,7 +159,7 @@ class TestUnifiedPipelineConfig:
 class TestParallelPipelineConfig:
     """Tests for parallel (multi-stage) pipeline configuration."""
 
-    def test_parallel_config_has_multiple_agents(self):
+    def test_parallel_config_has_multiple_agents(self, mock_kernel_client):
         """Test that parallel pipeline has multiple agents."""
         from minisweagent.capability.orchestrator import (
             SWEOrchestrator,
@@ -154,6 +168,7 @@ class TestParallelPipelineConfig:
 
         orchestrator = SWEOrchestrator(
             config=SWEOrchestratorConfig(pipeline_mode="parallel"),
+            kernel_client=mock_kernel_client,
         )
         config = orchestrator._create_parallel_pipeline_config()
 
@@ -166,7 +181,7 @@ class TestParallelPipelineConfig:
         assert "executor" in agent_names
         assert "verifier" in agent_names
 
-    def test_parallel_has_fan_out_fan_in(self):
+    def test_parallel_has_fan_out_fan_in(self, mock_kernel_client):
         """Test that parallel pipeline has fan-out/fan-in structure."""
         from minisweagent.capability.orchestrator import (
             SWEOrchestrator,
@@ -175,6 +190,7 @@ class TestParallelPipelineConfig:
 
         orchestrator = SWEOrchestrator(
             config=SWEOrchestratorConfig(pipeline_mode="parallel"),
+            kernel_client=mock_kernel_client,
         )
         config = orchestrator._create_parallel_pipeline_config()
 

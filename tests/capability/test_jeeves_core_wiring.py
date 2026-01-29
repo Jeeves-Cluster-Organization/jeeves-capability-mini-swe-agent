@@ -1,12 +1,18 @@
 """Tests for jeeves-core component wiring.
 
-Tests that ControlTower, CommBus, and Memory handlers are properly
+Tests that KernelClient (gRPC connection to Go kernel) is properly
 wired and accessible through the capability layer.
+
+Architecture Note:
+- Go kernel is REQUIRED (micro-OS architecture)
+- Python capabilities communicate with Go kernel via gRPC
+- KernelClient provides: lifecycle, resources, events, quota
 """
 
 import pytest
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch, AsyncMock
 
 # Add jeeves-core to path for imports
 _jeeves_core_path = Path(__file__).parent.parent.parent / "jeeves-core"
@@ -30,39 +36,36 @@ class TestJeevesContext:
         context = create_jeeves_context()
         assert isinstance(context, JeevesContext)
 
-    def test_context_has_control_tower(self):
-        """Test that context contains ControlTower."""
+    def test_context_has_kernel_client(self):
+        """Test that context contains KernelClient."""
         context = create_jeeves_context()
-        # ControlTower should be available if jeeves-core is present
-        if context.control_tower is not None:
-            assert hasattr(context.control_tower, 'lifecycle')
-            assert hasattr(context.control_tower, 'resources')
-            assert hasattr(context.control_tower, 'ipc')
+        assert context.kernel_client is not None
 
-    def test_context_has_commbus(self):
-        """Test that context contains CommBus."""
+    def test_context_kernel_client_has_record_usage(self):
+        """Test that kernel_client has record_usage method."""
         context = create_jeeves_context()
-        # CommBus should be available if jeeves-core is present
-        if context.commbus is not None:
-            assert hasattr(context.commbus, 'publish')
-            assert hasattr(context.commbus, 'query')
-            assert hasattr(context.commbus, 'register_handler')
+        assert hasattr(context.kernel_client, 'record_usage')
 
-    def test_context_is_wired(self):
-        """Test is_wired() method."""
+    def test_context_kernel_client_has_check_quota(self):
+        """Test that kernel_client has check_quota method."""
         context = create_jeeves_context()
-        # Either both are wired (jeeves-core available) or neither (not available)
-        is_wired = context.is_wired()
-        if is_wired:
-            assert context.control_tower is not None
-            assert context.commbus is not None
+        assert hasattr(context.kernel_client, 'check_quota')
 
-    def test_context_without_memory_handlers(self):
-        """Test creating context without registering memory handlers."""
-        context = create_jeeves_context(register_memory=False)
-        assert isinstance(context, JeevesContext)
-        # Memory handlers should not be registered
-        assert not context._memory_handlers_registered
+    def test_context_uses_default_kernel_address(self):
+        """Test that context uses default kernel address."""
+        context = create_jeeves_context()
+        assert context._kernel_address == "localhost:50051"
+
+    def test_context_accepts_custom_kernel_address(self):
+        """Test that context accepts custom kernel address."""
+        context = create_jeeves_context(kernel_address="custom:9999")
+        assert context._kernel_address == "custom:9999"
+
+    def test_context_accepts_db_parameter(self):
+        """Test that context accepts optional db parameter."""
+        mock_db = MagicMock()
+        context = create_jeeves_context(db=mock_db)
+        assert context.db is mock_db
 
 
 class TestGlobalContext:
@@ -90,112 +93,28 @@ class TestGlobalContext:
         assert context1 is not context2
 
 
-class TestControlTowerIntegration:
-    """Tests for ControlTower integration when available."""
+class TestKernelClientIntegration:
+    """Tests for KernelClient integration."""
 
-    @pytest.fixture
-    def context_with_control_tower(self):
-        """Create context and skip if ControlTower not available."""
+    def test_kernel_client_is_initialized(self):
+        """Test that KernelClient is properly initialized."""
         context = create_jeeves_context()
-        if context.control_tower is None:
-            pytest.skip("ControlTower not available (jeeves-core not installed)")
-        return context
+        # KernelClient should be present
+        assert context.kernel_client is not None
 
-    def test_control_tower_has_lifecycle_manager(self, context_with_control_tower):
-        """Test that ControlTower has lifecycle manager."""
-        ct = context_with_control_tower.control_tower
-        assert ct.lifecycle is not None
-
-    def test_control_tower_has_resource_tracker(self, context_with_control_tower):
-        """Test that ControlTower has resource tracker."""
-        ct = context_with_control_tower.control_tower
-        assert ct.resources is not None
-
-    def test_control_tower_has_ipc(self, context_with_control_tower):
-        """Test that ControlTower has IPC coordinator."""
-        ct = context_with_control_tower.control_tower
-        assert ct.ipc is not None
-
-    def test_control_tower_has_events(self, context_with_control_tower):
-        """Test that ControlTower has event aggregator."""
-        ct = context_with_control_tower.control_tower
-        assert ct.events is not None
-
-
-class TestCommBusIntegration:
-    """Tests for CommBus integration when available."""
-
-    @pytest.fixture
-    def context_with_commbus(self):
-        """Create context and skip if CommBus not available."""
+    @pytest.mark.asyncio
+    async def test_kernel_client_record_usage_callable(self):
+        """Test that record_usage can be called (doesn't require running kernel)."""
         context = create_jeeves_context()
-        if context.commbus is None:
-            pytest.skip("CommBus not available (jeeves-core not installed)")
-        return context
+        # Method should exist and be callable
+        assert callable(context.kernel_client.record_usage)
 
-    def test_commbus_can_register_handler(self, context_with_commbus):
-        """Test that CommBus can register handlers."""
-        bus = context_with_commbus.commbus
-
-        # Register a test handler
-        def test_handler(msg):
-            return {"received": True}
-
-        bus.register_handler("TestQuery", test_handler)
-        assert bus.has_handler("TestQuery")
-
-    def test_commbus_can_subscribe(self, context_with_commbus):
-        """Test that CommBus can subscribe to events."""
-        bus = context_with_commbus.commbus
-        events_received = []
-
-        def event_handler(event):
-            events_received.append(event)
-
-        unsubscribe = bus.subscribe("TestEvent", event_handler)
-        assert callable(unsubscribe)
-
-        # Clean up
-        unsubscribe()
-
-    def test_commbus_get_registered_types(self, context_with_commbus):
-        """Test that CommBus can list registered types."""
-        bus = context_with_commbus.commbus
-
-        # If memory handlers are registered, we should have some types
-        types = bus.get_registered_types()
-        assert isinstance(types, list)
-
-
-class TestMemoryHandlersIntegration:
-    """Tests for memory handler registration."""
-
-    @pytest.fixture
-    def context_with_memory(self):
-        """Create context with memory handlers and skip if not available."""
-        context = create_jeeves_context(register_memory=True)
-        if not context._memory_handlers_registered:
-            pytest.skip("Memory handlers not available (jeeves-core not installed)")
-        return context
-
-    def test_memory_handlers_registered(self, context_with_memory):
-        """Test that memory handlers are registered."""
-        bus = context_with_memory.commbus
-
-        # Check for expected memory handlers
-        types = bus.get_registered_types()
-
-        expected_handlers = [
-            "GetSessionState",
-            "GetRecentEntities",
-            "SearchMemory",
-            "ClearSession",
-            "UpdateFocus",
-        ]
-
-        for handler in expected_handlers:
-            if handler in types:
-                assert bus.has_handler(handler), f"Handler {handler} not registered"
+    @pytest.mark.asyncio
+    async def test_kernel_client_check_quota_callable(self):
+        """Test that check_quota can be called (doesn't require running kernel)."""
+        context = create_jeeves_context()
+        # Method should exist and be callable
+        assert callable(context.kernel_client.check_quota)
 
 
 class TestCapabilityId:
@@ -204,3 +123,18 @@ class TestCapabilityId:
     def test_capability_id_is_set(self):
         """Test that CAPABILITY_ID is defined."""
         assert CAPABILITY_ID == "mini-swe-agent"
+
+
+class TestKernelRequired:
+    """Tests verifying Go kernel is required."""
+
+    def test_context_creation_requires_kernel_client_module(self):
+        """Test that context creation requires jeeves_infra.kernel_client."""
+        # This should succeed if jeeves_infra is installed
+        context = create_jeeves_context()
+        assert context.kernel_client is not None
+
+    def test_context_documents_kernel_requirement(self):
+        """Test that JeevesContext documents kernel requirement."""
+        # The docstring should mention Go kernel is required
+        assert "REQUIRED" in JeevesContext.__doc__ or "kernel" in JeevesContext.__doc__.lower()

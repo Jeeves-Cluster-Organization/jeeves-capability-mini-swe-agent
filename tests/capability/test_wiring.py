@@ -16,7 +16,7 @@ class TestCapabilityRegistration:
 
     def test_register_capability_creates_registry_entries(self):
         """Test that register_capability populates the registry."""
-        from protocols.capability import (
+        from jeeves_infra.protocols import (
             get_capability_resource_registry,
             reset_capability_resource_registry,
         )

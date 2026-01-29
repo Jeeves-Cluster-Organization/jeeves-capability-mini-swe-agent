@@ -73,9 +73,8 @@ dev = [
     "mkdocs-redirects",
     "portkey-ai",
     "swe-rex",
-    # jeeves packages as proper packages
-    "jeeves-core @ file:jeeves-core",
-    "jeeves-infra @ file:jeeves-infra",
+    # Note: jeeves-infra must be installed separately: pip install -e ./jeeves-infra
+    # jeeves-core is a Go service, run with: cd jeeves-core && go run ./cmd -addr :50051
 ]
 
 [project.urls]

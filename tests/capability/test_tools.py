@@ -81,6 +81,7 @@ class TestBashExecute:
         assert result["returncode"] == 0
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(sys.platform == "win32", reason="WSL path translation differs from Windows paths")
     async def test_bash_execute_with_cwd(self):
         """Test bash_execute with custom working directory."""
         from minisweagent.capability.tools.catalog import bash_execute
