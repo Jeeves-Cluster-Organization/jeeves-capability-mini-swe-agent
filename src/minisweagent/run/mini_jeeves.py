@@ -44,6 +44,7 @@ from rich.table import Table
 
 from minisweagent import global_config_dir
 from minisweagent.capability import register_capability
+from minisweagent.capability.wiring import create_jeeves_context
 from minisweagent.capability.orchestrator import (
     SWEOrchestrator,
     SWEOrchestratorConfig,
@@ -557,8 +558,25 @@ async def _run_async(
     enable_metrics: bool = False,
     metrics_port: int = 9090,
     resume_checkpoint: Optional[str] = None,
+    kernel_address: Optional[str] = None,
 ) -> dict:
-    """Run the orchestrator asynchronously (v2.0)."""
+    """Run the orchestrator asynchronously (v2.0).
+
+    Requires Go kernel to be running. Set KERNEL_GRPC_ADDRESS or pass --kernel-address.
+    """
+    # Connect to Go kernel (REQUIRED)
+    console.print("[cyan]Connecting to Go kernel...[/cyan]")
+    try:
+        jeeves_context = create_jeeves_context(kernel_address=kernel_address)
+        console.print(f"[green]✓ Connected to kernel at {jeeves_context._kernel_address}[/green]")
+    except RuntimeError as e:
+        console.print(f"[bold red]Error: {e}[/bold red]")
+        console.print("\n[yellow]The Go kernel is required. Start it with:[/yellow]")
+        console.print("  cd jeeves-core && go run ./cmd/kernel --grpc-port 50051")
+        console.print("\n[yellow]Then set:[/yellow]")
+        console.print("  export KERNEL_GRPC_ADDRESS=localhost:50051")
+        return {"status": "error", "error": str(e)}
+
     # Configure tools
     configure_tools(cwd=os.getcwd(), timeout=timeout)
 
@@ -576,8 +594,9 @@ async def _run_async(
     # Create prompt registry
     prompt_registry = create_prompt_registry()
 
-    # v2.0: Create orchestrator with new options
+    # v2.0: Create orchestrator with kernel client (REQUIRED)
     orchestrator = create_swe_orchestrator(
+        kernel_client=jeeves_context.kernel_client,
         llm_factory=llm_factory,
         tool_executor=tool_executor,
         prompt_registry=prompt_registry,
@@ -681,6 +700,10 @@ def run(
     enable_metrics: bool = typer.Option(False, "--enable-metrics", help="Enable Prometheus metrics"),
     metrics_port: int = typer.Option(9090, "--metrics-port", help="Prometheus metrics port"),
     resume: Optional[str] = typer.Option(None, "--resume", help="Resume from checkpoint ID"),
+    kernel_address: Optional[str] = typer.Option(
+        None, "--kernel-address", envvar="KERNEL_GRPC_ADDRESS",
+        help="Go kernel gRPC address (default: localhost:50051)"
+    ),
 ) -> Any:
     # fmt: on
     """Run mini-jeeves on a task."""
@@ -755,6 +778,7 @@ def run(
             enable_metrics=enable_metrics,
             metrics_port=metrics_port,
             resume_checkpoint=resume,
+            kernel_address=kernel_address,
         ))
         exit_status = result.get("status", "unknown")
 

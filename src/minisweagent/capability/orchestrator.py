@@ -139,20 +139,27 @@ class SWEOrchestrator:
     def __init__(
         self,
         config: SWEOrchestratorConfig,
+        kernel_client: "KernelClient",
         llm_factory: Optional[Callable[[str], LLMProvider]] = None,
         tool_executor: Optional[ToolExecutor] = None,
         log: Optional[Logger] = None,
         persistence: Optional[Persistence] = None,
         prompt_registry: Optional[PromptRegistry] = None,
-        kernel_client: Optional["KernelClient"] = None,
     ):
+        # Go kernel is REQUIRED (micro-OS architecture)
+        if kernel_client is None:
+            raise RuntimeError(
+                "Go kernel is required. Start the kernel with:\n"
+                "  cd jeeves-core && go run ./cmd/kernel --grpc-port 50051\n"
+                "Then set: export KERNEL_GRPC_ADDRESS=localhost:50051"
+            )
         self.config = config
+        self.kernel_client = kernel_client
         self.llm_factory = llm_factory
         self.tool_executor = tool_executor
         self.log = log or _NullLogger()
         self.persistence = persistence
         self.prompt_registry = prompt_registry
-        self.kernel_client = kernel_client
         self._pipeline_runner: Optional[PipelineRunner] = None
 
         # v2.0: Database and services
@@ -259,9 +266,6 @@ class SWEOrchestrator:
         Returns:
             Quota exceeded reason if any, None otherwise
         """
-        if self.kernel_client is None:
-            return None
-
         try:
             await self.kernel_client.record_usage(
                 pid=pid,
@@ -610,15 +614,14 @@ class SWEOrchestrator:
                     metadata={"llm_calls": result_envelope.llm_call_count}
                 )
 
-            # Record resource usage via Go kernel
-            if self.kernel_client:
-                quota_exceeded = await self._record_resource_usage(
-                    pid=envelope.envelope_id,
-                    llm_calls=result_envelope.llm_call_count,
-                    agent_hops=result_envelope.agent_hop_count,
-                )
-                if quota_exceeded:
-                    logger.warning(f"Resource quota exceeded: {quota_exceeded}")
+            # Record resource usage via Go kernel (REQUIRED)
+            quota_exceeded = await self._record_resource_usage(
+                pid=envelope.envelope_id,
+                llm_calls=result_envelope.llm_call_count,
+                agent_hops=result_envelope.agent_hop_count,
+            )
+            if quota_exceeded:
+                logger.warning(f"Resource quota exceeded: {quota_exceeded}")
 
             # v2.0: Save checkpoint
             if self.checkpoint_service:
@@ -876,27 +879,30 @@ class SWEOrchestrator:
 # =============================================================================
 
 def create_swe_orchestrator(
+    kernel_client: "KernelClient",
     llm_factory: Optional[Callable[[str], LLMProvider]] = None,
     tool_executor: Optional[ToolExecutor] = None,
     log: Optional[Logger] = None,
     persistence: Optional[Persistence] = None,
     prompt_registry: Optional[PromptRegistry] = None,
-    kernel_client: Optional["KernelClient"] = None,
     **config_kwargs,
 ) -> SWEOrchestrator:
     """Factory function to create an SWE orchestrator.
 
     Args:
+        kernel_client: gRPC client to Go kernel (REQUIRED)
         llm_factory: Factory to create LLM providers by role
         tool_executor: Tool executor instance
         log: Logger instance
         persistence: State persistence
         prompt_registry: Prompt template registry
-        kernel_client: gRPC client to Go kernel for resource tracking
         **config_kwargs: Additional config options
 
     Returns:
         SWEOrchestrator instance
+
+    Raises:
+        RuntimeError: If kernel_client is None (Go kernel is required)
 
     Example:
         context = create_jeeves_context()
@@ -909,12 +915,12 @@ def create_swe_orchestrator(
 
     return SWEOrchestrator(
         config=config,
+        kernel_client=kernel_client,
         llm_factory=llm_factory,
         tool_executor=tool_executor,
         log=log,
         persistence=persistence,
         prompt_registry=prompt_registry,
-        kernel_client=kernel_client,
     )
 
 

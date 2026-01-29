@@ -1,16 +1,15 @@
 """Capability Registration for Mini-SWE-Agent.
 
-This module registers mini-swe-agent as a capability with jeeves-core.
+This module registers mini-swe-agent as a capability with jeeves-infra.
 All capability resources (tools, agents, services) are registered here.
 
-Jeeves-Core Components Wired:
-- ControlTower: Kernel for lifecycle, resources, IPC, and events
-- InMemoryCommBus: Message bus for inter-service communication
-- Memory Handlers: Session state, entity tracking, memory search
+Jeeves-Core Components Wired (via gRPC):
+- KernelClient: gRPC client to Go kernel for process lifecycle, resource quotas
+- CommBusClient: gRPC client for pub/sub messaging via Go kernel
 
 Constitutional Reference:
 - CONTRACT.md: Capabilities MUST implement a registration function
-- Avionics R3: No Domain Logic - infrastructure provides transport, not business logic
+- Micro-OS Architecture: Go kernel is REQUIRED, not optional
 - Capability Constitution R6: Domain Config Ownership
 
 Usage:
@@ -19,8 +18,9 @@ Usage:
     # At application startup (before using runtime services)
     register_capability()
 
-    # Create full jeeves-core context for enhanced features
+    # Create jeeves context with Go kernel connection (REQUIRED)
     context = create_jeeves_context()
+    orchestrator = create_swe_orchestrator(kernel_client=context.kernel_client, ...)
 """
 
 import logging
@@ -180,19 +180,33 @@ def _create_orchestrator_service(
     tool_executor,
     log,
     persistence,
-    kernel_client=None,
+    kernel_client,
 ):
     """Factory function to create the orchestrator service.
 
     Called by infrastructure to create the service that handles requests.
+
+    Args:
+        kernel_client: gRPC client to Go kernel (REQUIRED)
+        llm_factory: Factory for LLM providers
+        tool_executor: Tool executor instance
+        log: Logger instance
+        persistence: Persistence adapter
+
+    Raises:
+        RuntimeError: If kernel_client is None
     """
+    if kernel_client is None:
+        raise RuntimeError(
+            "Go kernel is required. Infrastructure must provide kernel_client."
+        )
     from minisweagent.capability.orchestrator import create_swe_orchestrator
     return create_swe_orchestrator(
+        kernel_client=kernel_client,
         llm_factory=llm_factory,
         tool_executor=tool_executor,
         log=log,
         persistence=persistence,
-        kernel_client=kernel_client,
     )
 
 
@@ -305,31 +319,28 @@ def get_agent_config(agent_name: str) -> AgentLLMConfig:
 
 @dataclass
 class JeevesContext:
-    """Context containing wired Go kernel gRPC client.
+    """Context containing wired Go kernel gRPC client (REQUIRED).
 
-    Session 15: Python capabilities communicate with Go kernel via gRPC.
+    The Go kernel is mandatory per the micro-OS architecture.
+    Python capabilities communicate with the Go kernel via gRPC.
 
     Usage:
         context = create_jeeves_context()
         await context.kernel_client.record_llm_call(pid, tokens_in=100, tokens_out=50)
     """
-    kernel_client: Optional["KernelClient"] = None
+    kernel_client: "KernelClient"
     db: Optional[Any] = None
     _kernel_address: str = field(default="localhost:50051", repr=False)
-
-    def is_wired(self) -> bool:
-        """Check if kernel client is available."""
-        return self.kernel_client is not None
 
 
 def create_jeeves_context(
     db: Optional[Any] = None,
     kernel_address: Optional[str] = None,
 ) -> JeevesContext:
-    """Create a JeevesContext with wired jeeves-core components.
+    """Create a JeevesContext with wired Go kernel gRPC client.
 
-    Session 15: This now creates a gRPC client to the Go kernel instead of
-    instantiating Python ControlTower/CommBus directly.
+    The Go kernel is REQUIRED. This function will fail if the kernel
+    client cannot be created.
 
     This wires up:
     1. KernelClient - gRPC client to Go kernel for lifecycle, resources, events
@@ -339,7 +350,10 @@ def create_jeeves_context(
         kernel_address: gRPC address of Go kernel (default: KERNEL_GRPC_ADDRESS env or localhost:50051)
 
     Returns:
-        JeevesContext with wired components
+        JeevesContext with wired kernel client
+
+    Raises:
+        RuntimeError: If kernel client cannot be created
 
     Example:
         context = create_jeeves_context()
@@ -352,24 +366,31 @@ def create_jeeves_context(
     if kernel_address is None:
         kernel_address = os.getenv("KERNEL_GRPC_ADDRESS", "localhost:50051")
 
-    context = JeevesContext(_kernel_address=kernel_address)
-
     try:
         from jeeves_infra.kernel_client import KernelClient
 
         # Create gRPC channel (lazy - doesn't connect until first call)
         channel = grpc_aio.insecure_channel(kernel_address)
-        context.kernel_client = KernelClient(channel)
+        kernel_client = KernelClient(channel)
         logger.info(f"KernelClient initialized (target: {kernel_address})")
 
-        context.db = db
+        return JeevesContext(
+            kernel_client=kernel_client,
+            db=db,
+            _kernel_address=kernel_address,
+        )
 
     except ImportError as e:
-        logger.warning(f"jeeves_infra.kernel_client not available: {e}")
+        raise RuntimeError(
+            f"Go kernel client not available: {e}\n"
+            "Install jeeves-infra: pip install -e ./jeeves-infra"
+        ) from e
     except Exception as e:
-        logger.error(f"Failed to create JeevesContext: {e}")
-
-    return context
+        raise RuntimeError(
+            f"Failed to create kernel client for {kernel_address}: {e}\n"
+            "Ensure the Go kernel is running:\n"
+            "  cd jeeves-core && go run ./cmd/kernel --grpc-port 50051"
+        ) from e
 
 
 # Global context (lazily initialized)
@@ -380,9 +401,13 @@ def get_jeeves_context() -> JeevesContext:
     """Get the global JeevesContext, creating if needed.
 
     This provides a singleton context for use across the application.
+    The Go kernel MUST be running for this to succeed.
 
     Returns:
         The global JeevesContext instance
+
+    Raises:
+        RuntimeError: If Go kernel is not available
     """
     global _global_context
     if _global_context is None:
