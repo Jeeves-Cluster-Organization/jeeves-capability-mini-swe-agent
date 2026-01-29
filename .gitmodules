@@ -1,3 +1,6 @@
 [submodule "jeeves-core"]
 	path = jeeves-core
 	url = https://github.com/Jeeves-Cluster-Organization/jeeves-core.git
+[submodule "jeeves-infra"]
+	path = jeeves-infra
+	url = https://github.com/Jeeves-Cluster-Organization/jeeves-airframe.git
