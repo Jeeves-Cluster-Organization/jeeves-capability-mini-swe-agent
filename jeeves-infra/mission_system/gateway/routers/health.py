@@ -11,7 +11,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 
-from jeeves_infra.gateway.grpc_client import get_grpc_client
+from mission_system.gateway.grpc_client import get_grpc_client
 from jeeves_infra.logging import get_current_logger
 from jeeves_infra.utils.serialization import ms_to_iso
 

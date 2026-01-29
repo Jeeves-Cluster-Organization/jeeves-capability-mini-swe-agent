@@ -12,7 +12,7 @@ UNIFIED EVENT SUPPORT (2025-12-14):
 
 Usage:
     # NEW: Using Event (preferred)
-    from jeeves_infra.gateway.event_bus import gateway_events
+    from mission_system.gateway.event_bus import gateway_events
     from protocols.events import Event, EventCategory
 
     event = Event.create_now(
@@ -28,7 +28,7 @@ Usage:
     await gateway_events.emit(event)
 
     # In main.py (subscriber)
-    from jeeves_infra.gateway.event_bus import gateway_events
+    from mission_system.gateway.event_bus import gateway_events
     gateway_events.subscribe("agent.*", broadcast_handler)
 """
 

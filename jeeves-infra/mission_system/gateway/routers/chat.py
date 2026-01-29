@@ -20,8 +20,8 @@ from fastapi import APIRouter, Request, Query, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from jeeves_infra.gateway.grpc_client import get_grpc_client
-from jeeves_infra.gateway.sse import SSEStream, merge_sse_streams
+from mission_system.gateway.grpc_client import get_grpc_client
+from mission_system.gateway.sse import SSEStream, merge_sse_streams
 from jeeves_infra.logging import get_current_logger
 from jeeves_infra.utils.serialization import ms_to_iso
 
@@ -131,7 +131,7 @@ async def _publish_unified_event(event: dict):
     Args:
         event: Dict containing event data from gRPC FlowEvent payload
     """
-    from jeeves_infra.gateway.event_bus import gateway_events
+    from mission_system.gateway.event_bus import gateway_events
     from protocols.events import (
         Event,
         EventCategory,

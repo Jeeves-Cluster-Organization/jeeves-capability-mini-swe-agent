@@ -221,15 +221,18 @@ class EventEmitter:
         self._dedup_cache = dedup_cache or _get_global_dedup_cache()
         self._commbus = commbus
 
-    @property
-    def commbus(self) -> Optional["InMemoryCommBus"]:
-        """Get the CommBus instance (lazy initialization if not provided)."""
+    async def _get_commbus(self) -> Optional["InMemoryCommBus"]:
+        """Get the CommBus instance (async lazy initialization).
+
+        Uses kernel_client to access the Go kernel's CommBus via gRPC.
+        This follows the Agentic OS pattern: Python → kernel_client → gRPC → Go kernel.
+        """
         if self._commbus is None:
             try:
-                from control_tower.ipc.commbus import get_commbus
-                self._commbus = get_commbus()
-            except ImportError:
-                # CommBus not available, continue without it
+                from jeeves_infra.kernel_client import get_commbus
+                self._commbus = await get_commbus()
+            except Exception:
+                # Kernel not running, CommBus unavailable
                 pass
         return self._commbus
 
@@ -372,30 +375,31 @@ class EventEmitter:
     ) -> None:
         """Publish event to CommBus for observability.
 
-        Uses the typed message classes from jeeves_infra.memory.messages.
+        Uses kernel_client to access Go kernel's CommBus via gRPC.
         Non-blocking - errors are logged but don't fail the main operation.
+
+        Agentic OS Pattern: Python → kernel_client → gRPC → Go kernel CommBus
         """
-        if self.commbus is None:
+        commbus = await self._get_commbus()
+        if commbus is None:
             return
 
         try:
-            from jeeves_infra.memory.messages import MemoryStored
-
-            # Create typed CommBus event
-            commbus_event = MemoryStored(
-                item_id=event_id,
-                layer="L2",  # Event log layer
-                user_id=user_id,
-                item_type=event_type,
-                metadata={
+            # Publish via gRPC to Go kernel's CommBus
+            # CommBusClient.publish(event_type, payload) interface
+            await commbus.publish(
+                event_type="MemoryStored",
+                payload={
+                    "item_id": event_id,
+                    "layer": "L2",  # Event log layer
+                    "user_id": user_id,
+                    "item_type": event_type,
                     "aggregate_type": aggregate_type,
                     "aggregate_id": aggregate_id,
                     "session_id": session_id,
                     **payload,
                 },
             )
-
-            await self.commbus.publish(commbus_event)
             self._logger.debug(
                 "event_published_to_commbus",
                 event_id=event_id,

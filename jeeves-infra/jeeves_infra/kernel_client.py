@@ -113,6 +113,7 @@ class KernelClient:
         # KernelServiceStub now generated - use it directly
         self._kernel_stub = kernel_stub or pb2_grpc.KernelServiceStub(channel)
         self._engine_stub = engine_stub or pb2_grpc.EngineServiceStub(channel)
+        self._commbus_client: Optional["CommBusClient"] = None
         self._closed = False
 
     @classmethod
@@ -152,6 +153,19 @@ class KernelClient:
         if not self._closed:
             await self._channel.close()
             self._closed = True
+
+    @property
+    def commbus(self) -> "CommBusClient":
+        """Get CommBus client for pub/sub operations.
+
+        The CommBusClient is lazily created on first access.
+
+        Returns:
+            CommBusClient instance
+        """
+        if self._commbus_client is None:
+            self._commbus_client = CommBusClient(self._channel)
+        return self._commbus_client
 
     # =========================================================================
     # Process Lifecycle (KernelService)
@@ -673,6 +687,121 @@ class KernelClientError(Exception):
 
 
 # =============================================================================
+# CommBus Client (Agentic OS IPC)
+# =============================================================================
+
+class CommBusClient:
+    """Python wrapper for Go CommBus via gRPC.
+
+    Provides access to the kernel's CommBus for pub/sub operations.
+    This follows the Agentic OS pattern: Python → kernel_client → gRPC → Go kernel.
+
+    Usage:
+        async with KernelClient.connect() as client:
+            # Publish event
+            await client.commbus.publish("AgentStarted", {"agent_name": "planner"})
+
+            # Query with response
+            result = await client.commbus.query("GetSettings", {"key": "llm"})
+
+    CommBus patterns:
+        - Publish: Fire-and-forget, fan-out to all subscribers
+        - Send: Fire-and-forget, single handler
+        - Query: Request-response, synchronous
+    """
+
+    def __init__(self, channel: grpc_aio.Channel):
+        """Initialize CommBus client.
+
+        Args:
+            channel: Async gRPC channel to the kernel
+        """
+        self._stub = pb2_grpc.CommBusServiceStub(channel)
+
+    async def publish(self, event_type: str, payload: Dict[str, Any]) -> bool:
+        """Publish event to all subscribers.
+
+        Args:
+            event_type: Type of event (e.g., "AgentStarted", "ToolCompleted")
+            payload: JSON-serializable event data
+
+        Returns:
+            True if published successfully
+        """
+        import json
+        request = pb2.CommBusPublishRequest(
+            event_type=event_type,
+            payload=json.dumps(payload).encode("utf-8"),
+        )
+        try:
+            response = await self._stub.Publish(request)
+            if not response.success:
+                logger.warning(f"CommBus publish failed: {response.error}")
+            return response.success
+        except grpc.RpcError as e:
+            logger.error(f"CommBus publish error: {e}")
+            return False
+
+    async def send(self, command_type: str, payload: Dict[str, Any]) -> bool:
+        """Send command to single handler.
+
+        Args:
+            command_type: Type of command (e.g., "InvalidateCache")
+            payload: JSON-serializable command data
+
+        Returns:
+            True if sent successfully
+        """
+        import json
+        request = pb2.CommBusSendRequest(
+            command_type=command_type,
+            payload=json.dumps(payload).encode("utf-8"),
+        )
+        try:
+            response = await self._stub.Send(request)
+            if not response.success:
+                logger.warning(f"CommBus send failed: {response.error}")
+            return response.success
+        except grpc.RpcError as e:
+            logger.error(f"CommBus send error: {e}")
+            return False
+
+    async def query(
+        self,
+        query_type: str,
+        payload: Dict[str, Any],
+        timeout_ms: int = 30000,
+    ) -> Any:
+        """Send query and wait for response.
+
+        Args:
+            query_type: Type of query (e.g., "GetSettings", "GetPrompt")
+            payload: JSON-serializable query data
+            timeout_ms: Query timeout in milliseconds
+
+        Returns:
+            Query result (deserialized from JSON)
+
+        Raises:
+            RuntimeError: If query fails
+        """
+        import json
+        request = pb2.CommBusQueryRequest(
+            query_type=query_type,
+            payload=json.dumps(payload).encode("utf-8"),
+            timeout_ms=timeout_ms,
+        )
+        try:
+            response = await self._stub.Query(request)
+            if not response.success:
+                raise RuntimeError(f"CommBus query failed: {response.error}")
+            return json.loads(response.result.decode("utf-8"))
+        except grpc.RpcError as e:
+            logger.error(f"CommBus query error: {e}")
+            raise RuntimeError(f"CommBus query failed: {e}") from e
+
+
+# =============================================================================
 # Global Client Management
 # =============================================================================
 
@@ -719,13 +848,32 @@ def reset_kernel_client():
     _global_client = None
 
 
+async def get_commbus() -> Optional[CommBusClient]:
+    """Get CommBus client via global kernel client.
+
+    This is a convenience function for getting CommBus access
+    without explicitly creating a KernelClient.
+
+    Returns:
+        CommBusClient if kernel is available, None otherwise
+    """
+    try:
+        client = await get_kernel_client()
+        return client.commbus
+    except Exception as e:
+        logger.warning(f"Failed to get CommBus: {e}")
+        return None
+
+
 __all__ = [
     "KernelClient",
     "KernelClientError",
     "QuotaCheckResult",
     "ProcessInfo",
+    "CommBusClient",
     "get_kernel_client",
     "close_kernel_client",
     "reset_kernel_client",
+    "get_commbus",
     "DEFAULT_KERNEL_ADDRESS",
 ]

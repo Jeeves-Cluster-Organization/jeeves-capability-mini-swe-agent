@@ -12,7 +12,7 @@ UNIFIED EVENT SUPPORT (2025-12-14):
 
 Usage:
     # In main.py at startup
-    from jeeves_infra.gateway.websocket import setup_websocket_subscriptions
+    from mission_system.gateway.websocket import setup_websocket_subscriptions
     setup_websocket_subscriptions()
 """
 
@@ -134,7 +134,7 @@ async def setup_websocket_subscriptions() -> None:
     - perception.*, intent.*, planner.*, executor.*, synthesizer.*, critic.*, integration.*
     - orchestrator.* (flow-level events)
     """
-    from jeeves_infra.gateway.event_bus import gateway_events
+    from mission_system.gateway.event_bus import gateway_events
 
     _logger = get_current_logger()
 

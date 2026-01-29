@@ -11,7 +11,7 @@ Unified Interrupt System (v4.0):
 Note: governance router is now in health.py (renamed in f670752)
 """
 
-from jeeves_infra.gateway.routers import chat, interrupts
-from jeeves_infra.gateway.routers import health as governance
+from mission_system.gateway.routers import chat, interrupts
+from mission_system.gateway.routers import health as governance
 
 __all__ = ["chat", "governance", "interrupts"]

@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from jeeves_infra.gateway.websocket_manager import WebSocketEventManager
+from mission_system.gateway.websocket_manager import WebSocketEventManager
 
 
 class FakeWebSocket:

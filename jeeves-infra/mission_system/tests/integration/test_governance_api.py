@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from jeeves_infra.utils.testing import parse_postgres_url
-from jeeves_infra.gateway.server import app, app_state
+from mission_system.gateway.server import app, app_state
 from jeeves_infra.memory.services.tool_health_service import ToolHealthService, HealthStatus
 from jeeves_infra.memory.repositories.tool_metrics_repository import ToolMetric
 

@@ -1,32 +1,39 @@
-"""Jeeves Infrastructure Layer - Adapters above the kernel.
+"""Jeeves Infrastructure Layer (L1) - Adapters above the kernel.
 
 This package provides infrastructure implementations for the jeeves-core
 microkernel. It contains the "drivers" that implement kernel protocols:
 
-- gateway/   - HTTP/WebSocket/gRPC translation (FastAPI)
-- llm/       - LLM providers (LiteLLM, OpenAI, Mock)
-- postgres/  - PostgreSQL + pgvector implementations
-- redis/     - Distributed state backend
-- memory/    - Memory service implementations (repositories, services)
-- runtime/   - Python agent/pipeline execution (LLM calls, tool execution)
-- utils/     - JSON repair, string helpers, datetime utilities
+- llm/           - LLM providers (LiteLLM, OpenAI, Mock)
+- postgres/      - PostgreSQL + pgvector implementations
+- redis/         - Distributed state backend
+- memory/        - Memory service implementations (repositories, services)
+- runtime/       - Python agent/pipeline execution (LLM calls, tool execution)
+- kernel_client/ - gRPC client for Go kernel (CommBus, Process, Scheduler)
+- utils/         - JSON repair, string helpers, datetime utilities
 
-Architecture:
-    Capabilities (User Space)
+Note: gateway/ has moved to mission_system.gateway (L2 orchestration layer)
+
+Architecture (Agentic OS):
+    L3: Capabilities (User Space)
            │
            ↓
-    jeeves-infra (Kernel Modules / Drivers)  <- THIS PACKAGE
+    L2: mission_system (Orchestration) - gateway, bootstrap, services
            │
            ↓
-    jeeves-core (Microkernel - Go)
+    L1: jeeves_infra (Infrastructure)  <- THIS PACKAGE
+           │
+           ↓
+    L0: jeeves-core (Go Kernel)
 
 Usage:
     from jeeves_infra.postgres import PostgreSQLClient
     from jeeves_infra.llm import OpenAIHTTPProvider
-    from jeeves_infra.gateway import create_gateway_app
     from jeeves_infra.runtime import PipelineRunner, Agent
-    from jeeves_infra.kernel_client import KernelClient
+    from jeeves_infra.kernel_client import KernelClient, get_commbus
     from jeeves_infra.utils import JSONRepairKit, utc_now
+
+    # Gateway moved to L2 orchestration layer:
+    # >>> from mission_system.gateway import create_gateway_app
 """
 
 __version__ = "1.0.0"

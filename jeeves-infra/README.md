@@ -61,24 +61,25 @@ from jeeves_infra.kernel_client import get_kernel_client
 
 # Use protocols for type safety
 from jeeves_infra.postgres import PostgreSQLClient
-from jeeves_infra.gateway import create_gateway_app
+from mission_system.gateway import create_gateway_app  # Gateway is in L2
 ```
 
 ## Packages
 
-### jeeves_infra
+### jeeves_infra (L1: Infrastructure)
 
 Core infrastructure with 230+ type exports:
 - Protocols and interfaces
 - LLM providers
-- Gateway (HTTP/WS/gRPC)
 - Memory services
 - Database clients
 - Observability
+- Kernel client (gRPC to Go kernel)
 
-### mission_system
+### mission_system (L2: Orchestration)
 
 Capability-agnostic orchestration infrastructure:
+- Gateway (HTTP/WS/gRPC) - moved from jeeves_infra
 - Agent profiles and configuration
 - Prompt templates and blocks
 - Event handling

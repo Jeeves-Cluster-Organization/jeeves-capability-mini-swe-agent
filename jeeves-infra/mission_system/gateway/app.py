@@ -32,8 +32,8 @@ from fastapi import Request
 import json
 from prometheus_client import make_asgi_app
 
-from jeeves_infra.gateway.grpc_client import GrpcClientManager, set_grpc_client, get_grpc_client
-from jeeves_infra.gateway.websocket import (
+from mission_system.gateway.grpc_client import GrpcClientManager, set_grpc_client, get_grpc_client
+from mission_system.gateway.websocket import (
     register_client,
     unregister_client,
     setup_websocket_subscriptions,
@@ -284,7 +284,7 @@ async def root():
 # Mount Routers
 # =============================================================================
 
-from jeeves_infra.gateway.routers import chat, governance, interrupts
+from mission_system.gateway.routers import chat, governance, interrupts
 
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(governance.router, prefix="/api/v1/governance", tags=["governance"])
